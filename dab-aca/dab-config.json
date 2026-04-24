@@ -28,7 +28,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "Simulator"
+        "provider": "AppService"
       },
       "mode": "development"
     }
@@ -39,10 +39,33 @@
         "object": "dbo.Customers",
         "type": "table"
       },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Customer",
+          "plural": "Customers"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ]
     },
@@ -51,10 +74,33 @@
         "object": "dbo.Products",
         "type": "table"
       },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "Product",
+          "plural": "Products"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ]
     },
@@ -63,10 +109,33 @@
         "object": "dbo.SalesOrders",
         "type": "table"
       },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "SalesOrder",
+          "plural": "SalesOrders"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ]
     },
@@ -75,10 +144,33 @@
         "object": "dbo.OrderItems",
         "type": "table"
       },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "OrderItem",
+          "plural": "OrderItems"
+        }
+      },
+      "rest": {
+        "enabled": true
+      },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "create", "read", "update", "delete" ]
+          "actions": [
+            {
+              "action": "create"
+            },
+            {
+              "action": "read"
+            },
+            {
+              "action": "update"
+            },
+            {
+              "action": "delete"
+            }
+          ]
         }
       ]
     },
@@ -86,12 +178,28 @@
       "source": {
         "object": "dbo.CustomerOrderSummary",
         "type": "view",
-        "key-fields": [ "CustomerId" ]
+        "key-fields": [
+          "CustomerId"
+        ]
+      },
+      "graphql": {
+        "enabled": true,
+        "type": {
+          "singular": "CustomerOrderSummary",
+          "plural": "CustomerOrderSummaries"
+        }
+      },
+      "rest": {
+        "enabled": true
       },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "read" ]
+          "actions": [
+            {
+              "action": "read"
+            }
+          ]
         }
       ]
     },
@@ -107,17 +215,23 @@
           }
         ]
       },
-      "rest": {
-        "enabled": true,
-        "methods": [ "get" ]
-      },
       "graphql": {
         "enabled": false
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [
+          "get"
+        ]
       },
       "permissions": [
         {
           "role": "anonymous",
-          "actions": [ "execute" ]
+          "actions": [
+            {
+              "action": "execute"
+            }
+          ]
         }
       ]
     }

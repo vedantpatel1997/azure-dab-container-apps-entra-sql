@@ -20,12 +20,18 @@ Fresh-start assumptions for this guide:
 - Local testing uses your Azure/Entra developer sign-in.
 - Production deployment to ACA `temp-test` uses a user-assigned managed identity.
 
+Validation notes from this repo:
+
+- `dab-aca/dab-config.json` parses as valid JSON.
+- `docker build -t dab-aca:validation .` succeeds from inside `dab-aca`.
+- `dab validate --config .\dab-config.json` satisfies the DAB schema and reports these REST paths: `/api/Customer`, `/api/Product`, `/api/SalesOrder`, `/api/OrderItem`, `/api/CustomerOrderSummary`, and `/api/SearchProducts`.
+- On this machine, database connectivity validation fails with `Login failed for user '<token-identified principal>'. The server is not currently configured to accept this token.` Fix that by configuring Microsoft Entra admin/user access for Azure SQL, or use SQL username/password for local testing.
+
 Official references used for this runbook:
 
 - DAB overview: https://learn.microsoft.com/en-us/azure/data-api-builder/overview
 - DAB CLI install: https://learn.microsoft.com/en-us/azure/data-api-builder/command-line/install
 - DAB SQL quickstart: https://learn.microsoft.com/en-us/azure/data-api-builder/quickstart/basic-sql
-- DAB add command: https://learn.microsoft.com/en-us/azure/data-api-builder/command-line/dab-add
 - DAB validate command: https://learn.microsoft.com/en-us/azure/data-api-builder/command-line/dab-validate
 - DAB start command: https://learn.microsoft.com/en-us/azure/data-api-builder/command-line/dab-start
 - DAB configuration schema: https://learn.microsoft.com/en-us/azure/data-api-builder/configuration/
@@ -51,9 +57,9 @@ Then you will:
 2. Connect to your Azure subscription.
 3. Confirm your SQL database is reachable.
 4. Create sample database objects because `dabdemo` currently has no tables.
-5. Create or identify a SQL login for local testing, or use Entra authentication.
-6. Generate a DAB config.
-7. Add sample tables/views/stored procedures as DAB entities.
+5. Configure local database authentication.
+6. Use the included DAB config.
+7. Confirm the included sample entities.
 8. Run DAB locally with the CLI.
 9. Run DAB locally with Docker.
 10. Build and push the DAB image to Azure Container Registry.
@@ -256,6 +262,8 @@ Authentication: Microsoft Entra ID, SQL Login, or whichever admin method you alr
 
 Open `dabdemo_sample_schema.sql` and run it against `dabdemo`.
 
+The script is safe to rerun for this demo. It drops the demo procedure, view, and tables first, then recreates and reseeds them.
+
 The script creates:
 
 - `dbo.Customers`
@@ -348,6 +356,7 @@ Open it and confirm these values:
 - `runtime.rest.enabled` is `true`
 - `runtime.graphql.enabled` is `true`
 - `runtime.mcp.enabled` is `true`
+- `runtime.host.authentication.provider` is `AppService`
 - host mode is `development` for local testing
 
 You do not need to run `dab init` for the ready-to-run path.
@@ -370,46 +379,9 @@ The included `dab-config.json` already exposes:
 - `SalesOrder` -> `dbo.SalesOrders`
 - `OrderItem` -> `dbo.OrderItems`
 - `CustomerOrderSummary` -> `dbo.CustomerOrderSummary`
-- `SearchProducts` -> `dbo.SearchProducts`
+- `SearchProducts` -> `dbo.SearchProducts` through REST only
 
 You do not need to run `dab add` for the ready-to-run path.
-
-If you regenerate `dab-config.json` from scratch, run these commands from inside the `dab-aca` folder:
-
-```powershell
-dab add Customer `
-  --source "dbo.Customers" `
-  --source.type table `
-  --permissions "anonymous:create,read,update,delete"
-
-dab add Product `
-  --source "dbo.Products" `
-  --source.type table `
-  --permissions "anonymous:create,read,update,delete"
-
-dab add SalesOrder `
-  --source "dbo.SalesOrders" `
-  --source.type table `
-  --permissions "anonymous:create,read,update,delete"
-
-dab add OrderItem `
-  --source "dbo.OrderItems" `
-  --source.type table `
-  --permissions "anonymous:create,read,update,delete"
-
-dab add CustomerOrderSummary `
-  --source "dbo.CustomerOrderSummary" `
-  --source.type view `
-  --source.key-fields "CustomerId" `
-  --permissions "anonymous:read"
-
-dab add SearchProducts `
-  --source "dbo.SearchProducts" `
-  --source.type stored-procedure `
-  --source.params "search:DAB" `
-  --permissions "anonymous:execute" `
-  --rest.methods GET
-```
 
 For demo simplicity, these entities allow anonymous access. In production, you will tighten this later.
 
@@ -425,6 +397,7 @@ If validation fails:
 - Confirm the SQL firewall allows your current IP.
 - Confirm you ran `dabdemo_sample_schema.sql` in the `dabdemo` database.
 - Confirm your local Entra user or SQL user can read/write the sample tables and execute `dbo.SearchProducts`.
+- If you see `Login failed for user '<token-identified principal>'. The server is not currently configured to accept this token.`, your local Entra auth is not ready for Azure SQL yet. Set a Microsoft Entra admin on SQL server `sql-dabmcp-kwcm0e`, connect as that admin, then create a contained database user for your signed-in account. If you do not want to do that yet, use the optional SQL username/password connection string for local testing.
 
 ## 12. Run DAB locally with the CLI
 
@@ -451,6 +424,7 @@ Invoke-RestMethod "http://localhost:5000/api/SalesOrder"
 Invoke-RestMethod "http://localhost:5000/api/OrderItem"
 Invoke-RestMethod "http://localhost:5000/api/CustomerOrderSummary"
 Invoke-RestMethod "http://localhost:5000/api/SearchProducts"
+Invoke-RestMethod "http://localhost:5000/api/SearchProducts?search=Mug"
 ```
 
 Test REST filtering:
@@ -463,7 +437,7 @@ Test GraphQL with PowerShell:
 
 ```powershell
 $body = @{
-  query = "{ products { items { ProductId Sku Name Category UnitPrice } } }"
+  query = "{ Products { items { ProductId Sku Name Category UnitPrice } } }"
 } | ConvertTo-Json
 
 Invoke-RestMethod `
@@ -473,7 +447,7 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-If the GraphQL field name differs, open `http://localhost:5000/graphql` and inspect the generated schema. REST paths above should work from the DAB entity names.
+The included config explicitly sets the GraphQL plural type for `Product` to `Products`, so the query uses `Products` with a capital `P`. If GraphQL still fails, open `http://localhost:5000/graphql` and inspect the generated schema. REST paths above should work from the DAB entity names.
 
 Stop local DAB with `Ctrl+C`.
 
@@ -519,14 +493,6 @@ dab configure `
   --runtime.host.mode Production
 ```
 
-Change the local-only `Simulator` authentication provider to `Unauthenticated` for this demo deployment. `Simulator` is for development mode only.
-
-```powershell
-dab configure `
-  --config .\dab-config.json `
-  --runtime.host.authentication.provider Unauthenticated
-```
-
 If you already know your front-end URL, configure CORS now. Replace `https://your-frontend-domain.com` with your real site. If you do not have a front end yet, skip this command for now.
 
 ```powershell
@@ -547,7 +513,7 @@ dab validate --config .\dab-config.json
 These are the specific things you changed for production:
 
 - `runtime.host.mode`: `Development` -> `Production`
-- `runtime.host.authentication.provider`: `Simulator` -> `Unauthenticated` for this demo
+- `runtime.host.authentication.provider`: keep `AppService` for DAB `1.7.93`
 - Database connection: still `@env('DATABASE_CONNECTION_STRING')`, no secret inside `dab-config.json`
 - ACA secret value: will use managed identity connection string
 - Container target port: `5000`

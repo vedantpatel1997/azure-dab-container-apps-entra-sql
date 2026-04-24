@@ -5,6 +5,8 @@ Server: sql-dabmcp-kwcm0e.database.windows.net
 
 SET NOCOUNT ON;
 
+IF OBJECT_ID(N'dbo.SearchProducts', N'P') IS NOT NULL DROP PROCEDURE dbo.SearchProducts;
+IF OBJECT_ID(N'dbo.CustomerOrderSummary', N'V') IS NOT NULL DROP VIEW dbo.CustomerOrderSummary;
 IF OBJECT_ID(N'dbo.OrderItems', N'U') IS NOT NULL DROP TABLE dbo.OrderItems;
 IF OBJECT_ID(N'dbo.SalesOrders', N'U') IS NOT NULL DROP TABLE dbo.SalesOrders;
 IF OBJECT_ID(N'dbo.Products', N'U') IS NOT NULL DROP TABLE dbo.Products;
