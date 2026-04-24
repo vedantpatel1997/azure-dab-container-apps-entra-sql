@@ -1,0 +1,125 @@
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/v1.7.93/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@env('DATABASE_CONNECTION_STRING')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api",
+      "request-body-strict": true
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql",
+      "allow-introspection": true
+    },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
+    "host": {
+      "cors": {
+        "origins": [],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "Simulator"
+      },
+      "mode": "development"
+    }
+  },
+  "entities": {
+    "Customer": {
+      "source": {
+        "object": "dbo.Customers",
+        "type": "table"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "Product": {
+      "source": {
+        "object": "dbo.Products",
+        "type": "table"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "SalesOrder": {
+      "source": {
+        "object": "dbo.SalesOrders",
+        "type": "table"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "OrderItem": {
+      "source": {
+        "object": "dbo.OrderItems",
+        "type": "table"
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "create", "read", "update", "delete" ]
+        }
+      ]
+    },
+    "CustomerOrderSummary": {
+      "source": {
+        "object": "dbo.CustomerOrderSummary",
+        "type": "view",
+        "key-fields": [ "CustomerId" ]
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "read" ]
+        }
+      ]
+    },
+    "SearchProducts": {
+      "source": {
+        "object": "dbo.SearchProducts",
+        "type": "stored-procedure",
+        "parameters": [
+          {
+            "name": "search",
+            "required": false,
+            "default": "DAB"
+          }
+        ]
+      },
+      "rest": {
+        "enabled": true,
+        "methods": [ "get" ]
+      },
+      "graphql": {
+        "enabled": false
+      },
+      "permissions": [
+        {
+          "role": "anonymous",
+          "actions": [ "execute" ]
+        }
+      ]
+    }
+  }
+}

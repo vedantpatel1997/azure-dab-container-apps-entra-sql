@@ -11,6 +11,15 @@ This guide is written for your Azure SQL Database:
 
 Data API builder, or `DAB`, creates REST, GraphQL, and optional MCP endpoints from a JSON configuration file. You normally do **not** need to clone and build `https://github.com/Azure/data-api-builder` unless you plan to change the DAB product source code. For normal use, install the DAB CLI locally, create `dab-config.json`, test it against your Azure SQL database, then build a small container image that extends the official DAB runtime image.
 
+Fresh-start assumptions for this guide:
+
+- Ignore any old `dab-config.json` from earlier attempts.
+- Use only the config in `dab-aca/dab-config.json`.
+- Assume Azure SQL database `dabdemo` currently has no tables.
+- Run `dab-aca/dabdemo_sample_schema.sql` first to create the sample database objects.
+- Local testing uses your Azure/Entra developer sign-in.
+- Production deployment to ACA `temp-test` uses a user-assigned managed identity.
+
 Official references used for this runbook:
 
 - DAB overview: https://learn.microsoft.com/en-us/azure/data-api-builder/overview
@@ -213,27 +222,25 @@ If you expose only read endpoints, keep this user read-only.
 
 For production, continue with managed identity instead of SQL username/password.
 
-## 6. Create the local DAB project folder
+## 6. Open the ready-to-run local DAB project folder
 
-From this workspace:
-
-```powershell
-New-Item -ItemType Directory -Force -Path .\dab-aca
-cd dab-aca
-```
-
-Copy the sample SQL script from this workspace into the project folder:
-
-```powershell
-Copy-Item ..\dabdemo_sample_schema.sql .\dabdemo_sample_schema.sql
-```
-
-Your folder should now look like:
+This workspace already includes a ready-to-run project folder:
 
 ```text
 dab-aca/
   dabdemo_sample_schema.sql
+  dab-config.json
+  Dockerfile
+  .dockerignore
 ```
+
+Move into it:
+
+```powershell
+cd dab-aca
+```
+
+If you ever need to recreate this folder from scratch, create the four files shown above using the contents in this repo.
 
 ## 7. Create sample tables in `dabdemo`
 
@@ -326,9 +333,26 @@ Optional SQL username/password connection string, only if you prefer SQL auth:
 $env:DATABASE_CONNECTION_STRING = "Server=tcp:sql-dabmcp-kwcm0e.database.windows.net,1433;Initial Catalog=dabdemo;Persist Security Info=False;User ID=<sql-user>;Password=<sql-password>;MultipleActiveResultSets=False;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 ```
 
-## 9. Initialize DAB config
+## 9. Use the included DAB config
 
-Create `dab-config.json` using the environment variable reference instead of embedding the connection string:
+The ready-to-run file `dab-aca/dab-config.json` is already configured for your sample objects and this connection-string pattern:
+
+```json
+"connection-string": "@env('DATABASE_CONNECTION_STRING')"
+```
+
+Open it and confirm these values:
+
+- `data-source.database-type` is `mssql`
+- `data-source.connection-string` is `@env('DATABASE_CONNECTION_STRING')`
+- `runtime.rest.enabled` is `true`
+- `runtime.graphql.enabled` is `true`
+- `runtime.mcp.enabled` is `true`
+- host mode is `development` for local testing
+
+You do not need to run `dab init` for the ready-to-run path.
+
+If you delete `dab-config.json` and want to regenerate it manually, use:
 
 ```powershell
 dab init `
@@ -337,19 +361,20 @@ dab init `
   --connection-string "@env('DATABASE_CONNECTION_STRING')"
 ```
 
-This creates `dab-config.json`.
+## 10. Confirm the sample database objects in DAB
 
-Open it and confirm:
+The included `dab-config.json` already exposes:
 
-- `data-source.database-type` is `mssql`
-- `data-source.connection-string` is `@env('DATABASE_CONNECTION_STRING')`
-- `runtime.rest.enabled` is `true`
-- `runtime.graphql.enabled` is `true`
-- host mode is `development` for local testing
+- `Customer` -> `dbo.Customers`
+- `Product` -> `dbo.Products`
+- `SalesOrder` -> `dbo.SalesOrders`
+- `OrderItem` -> `dbo.OrderItems`
+- `CustomerOrderSummary` -> `dbo.CustomerOrderSummary`
+- `SearchProducts` -> `dbo.SearchProducts`
 
-## 10. Add the sample database objects to DAB
+You do not need to run `dab add` for the ready-to-run path.
 
-Run these commands exactly from inside the `dab-aca` folder:
+If you regenerate `dab-config.json` from scratch, run these commands from inside the `dab-aca` folder:
 
 ```powershell
 dab add Customer `
@@ -494,6 +519,14 @@ dab configure `
   --runtime.host.mode Production
 ```
 
+Change the local-only `Simulator` authentication provider to `Unauthenticated` for this demo deployment. `Simulator` is for development mode only.
+
+```powershell
+dab configure `
+  --config .\dab-config.json `
+  --runtime.host.authentication.provider Unauthenticated
+```
+
 If you already know your front-end URL, configure CORS now. Replace `https://your-frontend-domain.com` with your real site. If you do not have a front end yet, skip this command for now.
 
 ```powershell
@@ -514,15 +547,16 @@ dab validate --config .\dab-config.json
 These are the specific things you changed for production:
 
 - `runtime.host.mode`: `Development` -> `Production`
+- `runtime.host.authentication.provider`: `Simulator` -> `Unauthenticated` for this demo
 - Database connection: still `@env('DATABASE_CONNECTION_STRING')`, no secret inside `dab-config.json`
 - ACA secret value: will use managed identity connection string
 - Container target port: `5000`
 - Ingress target app: existing ACA `temp-test`
 - Optional CORS: your real front-end origin
 
-## 15. Create Dockerfile and .dockerignore
+## 15. Confirm Dockerfile and .dockerignore
 
-Create `Dockerfile` in the `dab-aca` folder:
+The `dab-aca` folder already includes this `Dockerfile`:
 
 ```dockerfile
 FROM mcr.microsoft.com/azure-databases/data-api-builder:latest
@@ -530,7 +564,7 @@ COPY dab-config.json /App/dab-config.json
 CMD ["--ConfigFileName", "/App/dab-config.json"]
 ```
 
-Create `.dockerignore`:
+It also includes this `.dockerignore`:
 
 ```text
 .git
@@ -955,29 +989,14 @@ az account set --subscription 6a3bb170-5159-4bff-860b-aa74fb762697
 
 dotnet tool install --global Microsoft.DataApiBuilder
 
-New-Item -ItemType Directory -Force -Path .\dab-aca
 cd dab-aca
-Copy-Item ..\dabdemo_sample_schema.sql .\dabdemo_sample_schema.sql
 
 $env:DATABASE_CONNECTION_STRING = "Server=tcp:sql-dabmcp-kwcm0e.database.windows.net,1433;Database=dabdemo;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 
-dab init --database-type "mssql" --host-mode "Development" --connection-string "@env('DATABASE_CONNECTION_STRING')"
-dab add Customer --source "dbo.Customers" --source.type table --permissions "anonymous:create,read,update,delete"
-dab add Product --source "dbo.Products" --source.type table --permissions "anonymous:create,read,update,delete"
-dab add SalesOrder --source "dbo.SalesOrders" --source.type table --permissions "anonymous:create,read,update,delete"
-dab add OrderItem --source "dbo.OrderItems" --source.type table --permissions "anonymous:create,read,update,delete"
-dab add CustomerOrderSummary --source "dbo.CustomerOrderSummary" --source.type view --source.key-fields "CustomerId" --permissions "anonymous:read"
-dab add SearchProducts --source "dbo.SearchProducts" --source.type stored-procedure --source.params "search:DAB" --permissions "anonymous:execute" --rest.methods GET
 dab validate --config .\dab-config.json
 dab start --config .\dab-config.json
 ```
 
-Then create the Dockerfile:
+Before `dab validate`, run `dab-aca/dabdemo_sample_schema.sql` in Azure Data Studio or SSMS against database `dabdemo`.
 
-```dockerfile
-FROM mcr.microsoft.com/azure-databases/data-api-builder:latest
-COPY dab-config.json /App/dab-config.json
-CMD ["--ConfigFileName", "/App/dab-config.json"]
-```
-
-Build and deploy using the detailed ACA sections above.
+The Dockerfile and `.dockerignore` already exist in `dab-aca`. Build and deploy using the detailed ACA sections above.

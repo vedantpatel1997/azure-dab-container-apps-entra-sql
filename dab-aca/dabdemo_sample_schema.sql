@@ -1,16 +1,6 @@
 /*
 Run this script in Azure SQL Database: dabdemo
 Server: sql-dabmcp-kwcm0e.database.windows.net
-
-It creates a small demo schema for Azure Data API builder:
-- dbo.Customers
-- dbo.Products
-- dbo.SalesOrders
-- dbo.OrderItems
-- dbo.CustomerOrderSummary view
-- dbo.SearchProducts stored procedure
-
-The script is idempotent for tables/procedure/view creation and safe to rerun.
 */
 
 SET NOCOUNT ON;
@@ -54,10 +44,8 @@ CREATE TABLE dbo.SalesOrders
     OrderDateUtc datetime2(0) NOT NULL CONSTRAINT DF_SalesOrders_OrderDateUtc DEFAULT sysutcdatetime(),
     Status nvarchar(30) NOT NULL CONSTRAINT DF_SalesOrders_Status DEFAULT N'New',
     Notes nvarchar(500) NULL,
-    CONSTRAINT FK_SalesOrders_Customers
-        FOREIGN KEY (CustomerId) REFERENCES dbo.Customers(CustomerId),
-    CONSTRAINT CK_SalesOrders_Status
-        CHECK (Status IN (N'New', N'Paid', N'Shipped', N'Cancelled'))
+    CONSTRAINT FK_SalesOrders_Customers FOREIGN KEY (CustomerId) REFERENCES dbo.Customers(CustomerId),
+    CONSTRAINT CK_SalesOrders_Status CHECK (Status IN (N'New', N'Paid', N'Shipped', N'Cancelled'))
 );
 GO
 
@@ -68,10 +56,8 @@ CREATE TABLE dbo.OrderItems
     ProductId int NOT NULL,
     Quantity int NOT NULL,
     UnitPrice decimal(10,2) NOT NULL,
-    CONSTRAINT FK_OrderItems_SalesOrders
-        FOREIGN KEY (SalesOrderId) REFERENCES dbo.SalesOrders(SalesOrderId),
-    CONSTRAINT FK_OrderItems_Products
-        FOREIGN KEY (ProductId) REFERENCES dbo.Products(ProductId),
+    CONSTRAINT FK_OrderItems_SalesOrders FOREIGN KEY (SalesOrderId) REFERENCES dbo.SalesOrders(SalesOrderId),
+    CONSTRAINT FK_OrderItems_Products FOREIGN KEY (ProductId) REFERENCES dbo.Products(ProductId),
     CONSTRAINT CK_OrderItems_Quantity CHECK (Quantity > 0),
     CONSTRAINT CK_OrderItems_UnitPrice CHECK (UnitPrice >= 0)
 );
@@ -116,16 +102,9 @@ SELECT
     COUNT(DISTINCT so.SalesOrderId) AS OrderCount,
     COALESCE(SUM(oi.Quantity * oi.UnitPrice), 0) AS TotalSpend
 FROM dbo.Customers c
-LEFT JOIN dbo.SalesOrders so
-    ON so.CustomerId = c.CustomerId
-LEFT JOIN dbo.OrderItems oi
-    ON oi.SalesOrderId = so.SalesOrderId
-GROUP BY
-    c.CustomerId,
-    c.FirstName,
-    c.LastName,
-    c.Email,
-    c.City;
+LEFT JOIN dbo.SalesOrders so ON so.CustomerId = c.CustomerId
+LEFT JOIN dbo.OrderItems oi ON oi.SalesOrderId = so.SalesOrderId
+GROUP BY c.CustomerId, c.FirstName, c.LastName, c.Email, c.City;
 GO
 
 CREATE OR ALTER PROCEDURE dbo.SearchProducts
@@ -134,13 +113,7 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
-    SELECT
-        ProductId,
-        Sku,
-        Name,
-        Category,
-        UnitPrice,
-        IsActive
+    SELECT ProductId, Sku, Name, Category, UnitPrice, IsActive
     FROM dbo.Products
     WHERE
         IsActive = 1
@@ -154,14 +127,8 @@ BEGIN
 END;
 GO
 
-SELECT
-    'Customers' AS ObjectName,
-    COUNT(*) AS RowCount
-FROM dbo.Customers
-UNION ALL
-SELECT 'Products', COUNT(*) FROM dbo.Products
-UNION ALL
-SELECT 'SalesOrders', COUNT(*) FROM dbo.SalesOrders
-UNION ALL
-SELECT 'OrderItems', COUNT(*) FROM dbo.OrderItems;
+SELECT 'Customers' AS ObjectName, COUNT(*) AS RowCount FROM dbo.Customers
+UNION ALL SELECT 'Products', COUNT(*) FROM dbo.Products
+UNION ALL SELECT 'SalesOrders', COUNT(*) FROM dbo.SalesOrders
+UNION ALL SELECT 'OrderItems', COUNT(*) FROM dbo.OrderItems;
 GO
