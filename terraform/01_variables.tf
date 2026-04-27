@@ -38,3 +38,9 @@ variable "allowed_ip_addresses" {
   type    = map(string)
   default = {}
 }
+
+variable "developer_object_ids" {
+  type        = set(string)
+  description = "Human Entra object IDs that should retain SQL admin/access and Key Vault secret access when Terraform runs from GitHub OIDC."
+  default     = ["b7cd8d10-a86b-4200-bafa-1d701aef4ed2"]
+}

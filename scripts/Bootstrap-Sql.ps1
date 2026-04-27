@@ -1,6 +1,6 @@
 param(
-    [string]$TerraformDirectory = "$PSScriptRoot\..\terraform",
-    [string]$SchemaFile = "$PSScriptRoot\..\dab\dabdemo_sample_schema.sql"
+    [string]$TerraformDirectory = (Join-Path (Join-Path $PSScriptRoot "..") "terraform"),
+    [string]$SchemaFile = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "dab") "dabdemo_sample_schema.sql")
 )
 
 $ErrorActionPreference = "Stop"
@@ -16,7 +16,7 @@ if (Test-Path $work) {
     Remove-Item $work -Recurse -Force
 }
 
-dotnet new console --framework net10.0 --output $work | Out-Null
+dotnet new console --output $work | Out-Null
 dotnet add $work package Microsoft.Data.SqlClient --version 6.1.3 | Out-Null
 
 $program = @'
@@ -88,4 +88,26 @@ return 0;
 Set-Content -Path (Join-Path $work "Program.cs") -Value $program -Encoding UTF8
 
 $env:SQL_ACCESS_TOKEN = az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv
-dotnet run --project $work -- $server $database $schemaPath $groupName
+
+$lastError = $null
+for ($attempt = 1; $attempt -le 6; $attempt++) {
+    try {
+        dotnet run --project $work -- $server $database $schemaPath $groupName
+        $lastError = $null
+        break
+    }
+    catch {
+        $lastError = $_
+        if ($attempt -eq 6) {
+            break
+        }
+
+        Write-Host "SQL bootstrap attempt $attempt failed. Waiting for Entra/SQL permission propagation..."
+        Start-Sleep -Seconds 30
+        $env:SQL_ACCESS_TOKEN = az account get-access-token --resource https://database.windows.net/ --query accessToken -o tsv
+    }
+}
+
+if ($lastError) {
+    throw $lastError
+}

@@ -1,4 +1,4 @@
-# Production deployment
+# Production deployment guide
 
 Production deployment has two phases.
 
@@ -9,6 +9,7 @@ Terraform creates the Azure resources only:
 ```powershell
 cd terraform
 terraform init
+terraform validate
 terraform apply
 cd ..
 ```
@@ -35,6 +36,8 @@ Build and push the image:
 .\scripts\Deploy-Dab.ps1
 ```
 
+The Container App template is ignored by Terraform on purpose. Terraform creates the shell app, identity, ingress, and ACR pull permissions. Image deployment is handled by `scripts/Deploy-Dab.ps1` or GitHub Actions.
+
 ## Test production
 
 ```powershell
@@ -50,3 +53,9 @@ Expected result after the sample schema is loaded:
 ```
 
 Without a bearer token, table endpoints should return `403`.
+
+Current production URL can be read with:
+
+```powershell
+terraform -chdir=terraform output -raw container_app_url
+```

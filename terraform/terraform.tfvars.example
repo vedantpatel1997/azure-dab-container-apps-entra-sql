@@ -11,3 +11,9 @@ name_prefix     = "dabsecure"
 # allowed_ip_addresses = {
 #   AllowMyWorkstation = "x.x.x.x"
 # }
+
+# Human Entra object IDs that keep local SQL and Key Vault access even when
+# Terraform runs from GitHub OIDC.
+developer_object_ids = [
+  "b7cd8d10-a86b-4200-bafa-1d701aef4ed2"
+]

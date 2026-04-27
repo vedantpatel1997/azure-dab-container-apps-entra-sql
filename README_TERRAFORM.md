@@ -1,6 +1,6 @@
 # Terraform guide
 
-Terraform in this repo creates infrastructure only. It does not build the DAB image, does not deploy DAB config, and does not bootstrap SQL data. Those steps live in the DAB/deployment flow.
+Terraform in this repo creates infrastructure only. It does not build the DAB image or deploy app code. SQL bootstrap and DAB deployment run after Terraform in scripts or GitHub Actions.
 
 ## File order
 
@@ -31,6 +31,8 @@ Terraform creates:
 - A new resource group.
 - A user-assigned managed identity, or UAMI.
 - An Entra API app registration for DAB JWT validation.
+- A delegated `access_as_user` scope for clients.
+- Azure CLI preauthorization so local tests can request a token without extra portal clicks.
 - Entra SQL admin and SQL access groups.
 - ACR with `AcrPull` granted to the UAMI.
 - Key Vault with a `sql-connection-string` secret.
@@ -39,6 +41,16 @@ Terraform creates:
 
 The Container App has `lifecycle.ignore_changes` for the app template because image deployment is handled by CI/CD or local deployment commands.
 
+## Important files
+
+```text
+05_entra_api_app.tf       Creates the API app registration and token scope.
+06_entra_sql_groups.tf    Creates SQL admin/access groups and adds your user plus the UAMI.
+08_key_vault.tf           Stores the managed identity SQL connection string.
+09_sql_server_database.tf Creates Azure SQL and firewall rules.
+11_container_app_shell.tf Creates the Container App shell and ignores image drift.
+```
+
 ## Run
 
 ```powershell
@@ -46,6 +58,26 @@ cd terraform
 terraform init
 terraform validate
 terraform apply
+```
+
+For GitHub Actions, Terraform uses an Azure Storage remote backend. Bootstrap it with:
+
+```powershell
+.\scripts\Bootstrap-GitHubActions.ps1
+```
+
+For local use against that same backend:
+
+```powershell
+cd terraform
+terraform init `
+  -backend-config="use_azuread_auth=true" `
+  -backend-config="tenant_id=be945e7a-2e17-4b44-926f-512e85873eec" `
+  -backend-config="subscription_id=6a3bb170-5159-4bff-860b-aa74fb762697" `
+  -backend-config="resource_group_name=rg-dabsecure-tfstate" `
+  -backend-config="storage_account_name=stdabsecuretf797847" `
+  -backend-config="container_name=tfstate" `
+  -backend-config="key=dabsecure.tfstate"
 ```
 
 Useful outputs:
@@ -72,4 +104,3 @@ After a fresh apply, render the DAB config again because the random suffix and g
 cd ..
 .\scripts\Render-DabConfig.ps1
 ```
-

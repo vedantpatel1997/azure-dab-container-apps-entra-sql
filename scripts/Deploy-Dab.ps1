@@ -1,6 +1,6 @@
 param(
-    [string]$TerraformDirectory = "$PSScriptRoot\..\terraform",
-    [string]$DabDirectory = "$PSScriptRoot\..\dab",
+    [string]$TerraformDirectory = (Join-Path (Join-Path $PSScriptRoot "..") "terraform"),
+    [string]$DabDirectory = (Join-Path (Join-Path $PSScriptRoot "..") "dab"),
     [string]$ImageTag = "latest"
 )
 

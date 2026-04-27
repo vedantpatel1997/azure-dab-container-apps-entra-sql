@@ -2,13 +2,11 @@ name: deploy-dab
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - "dab/**"
-      - "scripts/Render-DabConfig.ps1"
-      - ".github/workflows/deploy-dab.yml"
+  workflow_run:
+    workflows:
+      - infra
+    types:
+      - completed
 
 permissions:
   id-token: write
@@ -16,6 +14,7 @@ permissions:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -23,9 +22,9 @@ jobs:
 
       - uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
-          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Render DAB config
         shell: pwsh
@@ -51,3 +50,10 @@ jobs:
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/dab-api:${GITHUB_SHA}" \
             --set-env-vars "AZURE_CLIENT_ID=${{ vars.AZURE_UAMI_CLIENT_ID }}"
+
+      - name: Test production DAB
+        shell: pwsh
+        run: |
+          ./scripts/Test-Dab.ps1 `
+            -BaseUrl "${{ vars.AZURE_CONTAINER_APP_URL }}" `
+            -ApiScope "${{ vars.DAB_API_SCOPE }}"

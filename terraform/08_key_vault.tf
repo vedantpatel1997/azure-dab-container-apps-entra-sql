@@ -11,9 +11,19 @@ resource "azurerm_key_vault" "kv" {
 resource "azurerm_key_vault_access_policy" "current_user" {
   key_vault_id = azurerm_key_vault.kv.id
   tenant_id    = var.tenant_id
-  object_id    = data.azuread_client_config.current.object_id
+  object_id    = local.terraform_principal_object_id
 
   secret_permissions = ["Get", "List", "Set", "Delete", "Recover", "Purge"]
+}
+
+resource "azurerm_key_vault_access_policy" "developers" {
+  for_each = local.key_vault_developer_object_ids
+
+  key_vault_id = azurerm_key_vault.kv.id
+  tenant_id    = var.tenant_id
+  object_id    = each.value
+
+  secret_permissions = ["Get", "List"]
 }
 
 resource "azurerm_key_vault_access_policy" "uami" {

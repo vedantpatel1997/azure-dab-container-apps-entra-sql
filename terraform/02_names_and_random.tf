@@ -32,4 +32,12 @@ locals {
   sql_admin_password    = coalesce(var.sql_admin_password, random_password.sql_admin.result)
 
   sql_managed_identity_connection_string = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};Authentication=Active Directory Managed Identity;User Id=${azurerm_user_assigned_identity.aca.client_id};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+
+  terraform_principal_object_id = data.azuread_client_config.current.object_id
+  sql_admin_member_object_ids   = toset(concat([local.terraform_principal_object_id], tolist(var.developer_object_ids)))
+  sql_access_member_object_ids  = toset(concat([local.terraform_principal_object_id, azurerm_user_assigned_identity.aca.principal_id], tolist(var.developer_object_ids)))
+  key_vault_developer_object_ids = setsubtract(
+    var.developer_object_ids,
+    toset([local.terraform_principal_object_id])
+  )
 }

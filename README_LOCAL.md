@@ -1,4 +1,4 @@
-# Local testing
+# Local testing guide
 
 Local testing uses your Entra account for both the API token and SQL database connection.
 
@@ -15,6 +15,13 @@ Render config after Terraform apply:
 .\scripts\Render-DabConfig.ps1
 ```
 
+Restore the repo-local DAB 2.0 RC CLI:
+
+```powershell
+dotnet tool restore
+dotnet tool run dab -- --version
+```
+
 Set the local SQL connection string:
 
 ```powershell
@@ -27,21 +34,19 @@ $env:DATABASE_CONNECTION_STRING = "Server=tcp:$SQL_SERVER,1433;Database=$SQL_DB;
 
 DAB 2.0 RC is required because this project uses `autoentities`.
 
-If your global `dab` CLI is older, install the 2.0 RC tool into a temporary folder:
+Use the repo-local tool:
 
 ```powershell
-$tool = Join-Path $env:TEMP "dab-tool-2rc"
-dotnet tool install Microsoft.DataApiBuilder --tool-path $tool --version 2.0.0-rc
-& "$tool\dab.exe" --version
+dotnet tool run dab -- start --config .\dab\dab-config.local.json --no-https-redirect
 ```
 
-Then run:
+Or run the complete local test script:
 
 ```powershell
-& "$tool\dab.exe" start --config .\dab\dab-config.local.json --no-https-redirect
+.\scripts\Test-DabLocal.ps1
 ```
 
-If local CLI is still DAB 1.7, run the 2.0 RC container after Docker Desktop is started:
+If you prefer Docker, run the 2.0 RC container after Docker Desktop is started:
 
 ```powershell
 docker run --rm -it `
@@ -64,6 +69,14 @@ Invoke-RestMethod "http://localhost:5000/api/dbo_Products" -Headers $HEADERS
 Invoke-RestMethod "http://localhost:5000/api/dbo_Customers" -Headers $HEADERS
 Invoke-RestMethod "http://localhost:5000/api/openapi" -Headers $HEADERS
 ```
+
+Anonymous data access should fail:
+
+```powershell
+Invoke-WebRequest "http://localhost:5000/api/dbo_Products" -UseBasicParsing
+```
+
+Expected status is `403`.
 
 GraphQL:
 

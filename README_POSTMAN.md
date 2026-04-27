@@ -56,6 +56,21 @@ For an interactive user flow, register a Postman client app or use an approved c
 https://oauth.pstmn.io/v1/callback
 ```
 
+Then grant that client app delegated access to the DAB API scope:
+
+```text
+API permissions -> Add a permission -> My APIs -> DAB API app -> access_as_user
+```
+
+For local quick testing without a separate Postman app registration, you can also paste a token from Azure CLI into Postman:
+
+```powershell
+$SCOPE = terraform -chdir=terraform output -raw api_scope
+az account get-access-token --scope $SCOPE --query accessToken -o tsv
+```
+
+In Postman, set `Authorization` type to `Bearer Token` and paste the token.
+
 Then request a token and send it as:
 
 ```text
