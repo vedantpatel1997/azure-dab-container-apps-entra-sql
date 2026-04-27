@@ -39,6 +39,7 @@ jobs:
         run: |
           az acr build \
             --registry "${{ vars.AZURE_ACR_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
             --image "dab-api:${GITHUB_SHA}" \
             ./dab
 

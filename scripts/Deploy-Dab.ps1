@@ -15,12 +15,22 @@ $resourceGroup = $outputs.resource_group_name.value
 $containerApp = $outputs.container_app_name.value
 $uamiClientId = $outputs.uami_client_id.value
 
-az acr build --registry $acrName --image "dab-api:$ImageTag" $DabDirectory
+az acr build `
+    --registry $acrName `
+    --resource-group $resourceGroup `
+    --image "dab-api:$ImageTag" `
+    $DabDirectory
+if ($LASTEXITCODE -ne 0) {
+    throw "ACR build failed with exit code $LASTEXITCODE"
+}
 
 az containerapp update `
     --name $containerApp `
     --resource-group $resourceGroup `
     --image "$acrLogin/dab-api:$ImageTag" `
     --set-env-vars "AZURE_CLIENT_ID=$uamiClientId"
+if ($LASTEXITCODE -ne 0) {
+    throw "Container App update failed with exit code $LASTEXITCODE"
+}
 
 Write-Host "Deployed $acrLogin/dab-api:$ImageTag to $containerApp"

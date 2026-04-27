@@ -9,6 +9,7 @@ $outputs = terraform "-chdir=$TerraformDirectory" output -json | ConvertFrom-Jso
 $server = $outputs.sql_server_fqdn.value
 $database = $outputs.sql_database_name.value
 $groupName = $outputs.sql_access_group.value
+$uamiName = ($outputs.uami_resource_id.value -split "/")[-1]
 $schemaPath = (Resolve-Path $SchemaFile).Path
 
 $work = Join-Path $env:TEMP "dab-sql-bootstrap"
@@ -25,7 +26,7 @@ using Microsoft.Data.SqlClient;
 
 if (args.Length < 4)
 {
-    Console.Error.WriteLine("Usage: <server> <database> <schemaFile> <groupName>");
+    Console.Error.WriteLine("Usage: <server> <database> <schemaFile> <groupName> [uamiName]");
     return 2;
 }
 
@@ -33,6 +34,7 @@ var server = args[0];
 var database = args[1];
 var schemaFile = args[2];
 var groupName = args[3];
+var uamiName = args.Length > 4 ? args[4] : "";
 var token = Environment.GetEnvironmentVariable("SQL_ACCESS_TOKEN");
 
 if (string.IsNullOrWhiteSpace(token))
@@ -74,6 +76,22 @@ GRANT EXECUTE ON dbo.SearchProducts TO [{escapedGroup}];
 ";
 await ExecuteBatch(grantSql);
 
+if (!string.IsNullOrWhiteSpace(uamiName))
+{
+    var escapedUami = uamiName.Replace("]", "]]", StringComparison.Ordinal);
+    var escapedUamiLiteral = uamiName.Replace("'", "''", StringComparison.Ordinal);
+    var uamiGrantSql = $@"
+IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'{escapedUamiLiteral}')
+BEGIN
+  CREATE USER [{escapedUami}] FROM EXTERNAL PROVIDER;
+END;
+ALTER ROLE db_datareader ADD MEMBER [{escapedUami}];
+ALTER ROLE db_datawriter ADD MEMBER [{escapedUami}];
+GRANT EXECUTE ON dbo.SearchProducts TO [{escapedUami}];
+";
+    await ExecuteBatch(uamiGrantSql);
+}
+
 await using var verify = conn.CreateCommand();
 verify.CommandText = "SELECT 'Customers', COUNT(*) FROM dbo.Customers UNION ALL SELECT 'Products', COUNT(*) FROM dbo.Products UNION ALL SELECT 'SalesOrders', COUNT(*) FROM dbo.SalesOrders UNION ALL SELECT 'OrderItems', COUNT(*) FROM dbo.OrderItems";
 await using var reader = await verify.ExecuteReaderAsync();
@@ -92,7 +110,7 @@ $env:SQL_ACCESS_TOKEN = az account get-access-token --resource https://database.
 $lastError = $null
 for ($attempt = 1; $attempt -le 6; $attempt++) {
     try {
-        dotnet run --project $work -- $server $database $schemaPath $groupName
+        dotnet run --project $work -- $server $database $schemaPath $groupName $uamiName
         $lastError = $null
         break
     }

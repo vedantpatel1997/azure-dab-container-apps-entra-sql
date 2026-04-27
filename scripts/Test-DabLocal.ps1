@@ -12,6 +12,8 @@ $sqlDb = $outputs.sql_database_name.value
 $scope = $outputs.api_scope.value
 $configPath = (Resolve-Path $ConfigFile).Path
 
+$env:AZURE_TENANT_ID = "be945e7a-2e17-4b44-926f-512e85873eec"
+$env:AZURE_TOKEN_CREDENTIALS = "AzureCliCredential"
 $env:DATABASE_CONNECTION_STRING = "Server=tcp:$sqlServer,1433;Database=$sqlDb;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 
 dotnet tool restore | Out-Null
@@ -20,7 +22,7 @@ $out = Join-Path $env:TEMP "dab-local-test.out.log"
 $err = Join-Path $env:TEMP "dab-local-test.err.log"
 Remove-Item $out, $err -ErrorAction SilentlyContinue
 
-$arguments = @("tool", "run", "dab", "--", "start", "--config", $configPath, "--no-https-redirect")
+$arguments = "tool run dab -- start --config `"$configPath`" --no-https-redirect"
 $process = Start-Process -FilePath "dotnet" -ArgumentList $arguments -PassThru -WindowStyle Hidden -RedirectStandardOutput $out -RedirectStandardError $err
 
 try {
