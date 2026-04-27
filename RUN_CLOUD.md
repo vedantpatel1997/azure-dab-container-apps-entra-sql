@@ -28,6 +28,8 @@ terraform -chdir=terraform apply
 
 Terraform uses local state only.
 
+The command above writes your current public IP into `terraform/local.auto.tfvars.json` so SSMS can connect to Azure SQL from your machine.
+
 ## 2. Resource Names
 
 Terraform creates fixed names:
@@ -87,6 +89,8 @@ dab/dabdemo_sample_schema.sql
 
 Terraform sets `grp-vkp-sql-dabdemo` as the SQL Entra administrator group and adds your user plus the Container App managed identity as members.
 
+If SSMS login fails immediately after Terraform finishes, wait a few minutes and try again. Entra group membership can take a short time to work in Azure SQL.
+
 ## 5. Key Vault Connection Strings
 
 Terraform stores three connection strings:
@@ -116,6 +120,12 @@ That Entra app needs:
 ```text
 Reader on the subscription
 Contributor on rg-vkp-dabdemo
+```
+
+The federated credential subject should match this repo and branch:
+
+```text
+repo:vedantpatel1997/azure-dab-container-apps-entra-sql:ref:refs/heads/main
 ```
 
 The workflow uses fixed resource names and looks up the Container App managed identity client id during deployment.

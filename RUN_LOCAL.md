@@ -9,11 +9,21 @@ az login --tenant be945e7a-2e17-4b44-926f-512e85873eec
 az account set --subscription 6a3bb170-5159-4bff-860b-aa74fb762697
 ```
 
-Your Entra user object id must be in `terraform/developer_object_ids`. Terraform adds that user to:
+Your Entra user object id must be in the Terraform variable `developer_object_ids`.
+
+The default value is in:
+
+```text
+terraform/01_variables.tf
+```
+
+Terraform adds that user to:
 
 ```text
 grp-vkp-sql-dabdemo
 ```
+
+The Container App managed identity is added to the same group automatically.
 
 ## 2. Confirm Terraform Has Been Applied
 
@@ -25,6 +35,8 @@ SQL database: vkp-dabdemo
 Key Vault: kv-vkp-dabdemo
 Secret: sql-connection-string-local
 ```
+
+If the SQL Server or group was just created, wait a few minutes before testing. Entra group membership can take a short time to work in Azure SQL.
 
 The local DAB config reads:
 

@@ -15,7 +15,7 @@ variable "location" {
 
 variable "name_prefix" {
   type    = string
-  default = "vkp"
+  default = "vp"
 }
 
 variable "sql_database_name" {
