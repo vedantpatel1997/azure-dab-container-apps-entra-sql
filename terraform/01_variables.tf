@@ -15,12 +15,12 @@ variable "location" {
 
 variable "name_prefix" {
   type    = string
-  default = "dabsecure"
+  default = "vkp"
 }
 
 variable "sql_database_name" {
   type    = string
-  default = "dabdemo"
+  default = "vkp-dabdemo"
 }
 
 variable "sql_admin_login" {
@@ -41,6 +41,6 @@ variable "allowed_ip_addresses" {
 
 variable "developer_object_ids" {
   type        = set(string)
-  description = "Human Entra object IDs that should retain SQL admin/access and Key Vault secret access when Terraform runs from GitHub OIDC."
+  description = "Human Entra object IDs that should retain SQL admin/access and Key Vault secret access."
   default     = ["b7cd8d10-a86b-4200-bafa-1d701aef4ed2"]
 }

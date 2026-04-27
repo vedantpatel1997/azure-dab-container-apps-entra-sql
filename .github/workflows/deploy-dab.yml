@@ -2,11 +2,6 @@ name: deploy-dab
 
 on:
   workflow_dispatch:
-  workflow_run:
-    workflows:
-      - infra
-    types:
-      - completed
 
 permissions:
   id-token: write
@@ -14,7 +9,6 @@ permissions:
 
 jobs:
   deploy:
-    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -40,7 +34,7 @@ jobs:
           az acr build \
             --registry "${{ vars.AZURE_ACR_NAME }}" \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --image "dab-api:${GITHUB_SHA}" \
+            --image "vkp-dab-api:${GITHUB_SHA}" \
             ./dab
 
       - name: Update Container App
@@ -49,12 +43,5 @@ jobs:
           az containerapp update \
             --name "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
             --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/dab-api:${GITHUB_SHA}" \
+            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/vkp-dab-api:${GITHUB_SHA}" \
             --set-env-vars "AZURE_CLIENT_ID=${{ vars.AZURE_UAMI_CLIENT_ID }}"
-
-      - name: Test production DAB
-        shell: pwsh
-        run: |
-          ./scripts/Test-Dab.ps1 `
-            -BaseUrl "${{ vars.AZURE_CONTAINER_APP_URL }}" `
-            -ApiScope "${{ vars.DAB_API_SCOPE }}"

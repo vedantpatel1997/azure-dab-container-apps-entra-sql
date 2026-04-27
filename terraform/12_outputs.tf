@@ -2,6 +2,14 @@ output "resource_group_name" {
   value = azurerm_resource_group.main.name
 }
 
+output "subscription_id" {
+  value = var.subscription_id
+}
+
+output "tenant_id" {
+  value = var.tenant_id
+}
+
 output "container_app_url" {
   value = "https://${azurerm_container_app.dab.ingress[0].fqdn}"
 }
@@ -48,6 +56,10 @@ output "sql_access_group" {
 
 output "uami_client_id" {
   value = azurerm_user_assigned_identity.aca.client_id
+}
+
+output "uami_name" {
+  value = azurerm_user_assigned_identity.aca.name
 }
 
 output "uami_resource_id" {
