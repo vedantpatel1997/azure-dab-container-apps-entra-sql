@@ -20,7 +20,7 @@ terraform/01_variables.tf
 Terraform adds that user to:
 
 ```text
-grp-vkp-sql-dabdemo
+grp-vp-sql-dabdemo
 ```
 
 The Container App managed identity is added to the same group automatically.
@@ -30,9 +30,9 @@ The Container App managed identity is added to the same group automatically.
 Terraform creates:
 
 ```text
-SQL server: sql-vkp-dabdemo.database.windows.net
+SQL server: sql-vp-dabdemo.database.windows.net
 SQL database: vkp-dabdemo
-Key Vault: kv-vkp-dabdemo
+Key Vault: kv-vp-dabdemo
 Secret: sql-connection-string-local
 ```
 
@@ -44,15 +44,21 @@ The local DAB config reads:
 dab/dab-config.local.json
 ```
 
-## 3. Update The API Audience
+## 3. Check The API Audience
 
-After `terraform apply`, get the API audience:
+The current API audience in both DAB config files is:
+
+```text
+911707a6-46f5-432b-86d1-9e645a3b6e4b
+```
+
+If you delete and recreate the Terraform infrastructure, get the new API audience:
 
 ```powershell
 terraform -chdir=terraform output -raw api_audience
 ```
 
-Replace `REPLACE_WITH_TERRAFORM_OUTPUT_API_AUDIENCE` in both files:
+Then update the `runtime.host.authentication.jwt.audience` value in both files:
 
 ```text
 dab/dab-config.json
@@ -64,7 +70,7 @@ dab/dab-config.local.json
 Connect in SSMS:
 
 ```text
-Server: sql-vkp-dabdemo.database.windows.net
+Server: sql-vp-dabdemo.database.windows.net
 Database: vkp-dabdemo
 Authentication: Microsoft Entra MFA or Microsoft Entra interactive
 ```
@@ -94,7 +100,7 @@ Leave that terminal running.
 Open a second PowerShell terminal:
 
 ```powershell
-$scope = "api://app-vkp-api-dabdemo/access_as_user"
+$scope = "api://app-vp-api-dabdemo/access_as_user"
 $token = az account get-access-token --scope $scope --query accessToken -o tsv
 $headers = @{ Authorization = "Bearer $token" }
 
@@ -103,6 +109,29 @@ Invoke-WebRequest "http://localhost:5000/api/openapi" -Headers $headers -UseBasi
 Invoke-WebRequest "http://localhost:5000/api/dbo_Products" -Headers $headers -UseBasicParsing
 Invoke-WebRequest "http://localhost:5000/api/dbo_Customers" -Headers $headers -UseBasicParsing
 ```
+
+GraphQL:
+
+```powershell
+$body = @{ query = "{ dbo_Products { items { ProductId Name } } }" } | ConvertTo-Json -Compress
+
+Invoke-RestMethod `
+  -Uri "http://localhost:5000/graphql" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Headers $headers `
+  -Body $body
+```
+
+Optional health check:
+
+```powershell
+Invoke-WebRequest "http://localhost:5000/health" -UseBasicParsing
+```
+
+Because local health runs as `anonymous`, REST entity checks can show `Forbidden` when your entities only allow the `authenticated` role. In that case, use the authenticated REST and GraphQL calls above as the real API test.
+
+The `/mcp` path is enabled for MCP clients. A normal browser or `Invoke-WebRequest` GET can return `406 Not Acceptable`; that does not mean REST or GraphQL is broken.
 
 Anonymous table access should fail after tables exist:
 

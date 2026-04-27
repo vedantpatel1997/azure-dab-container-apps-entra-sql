@@ -24,8 +24,8 @@ jobs:
         shell: bash
         run: |
           az acr build \
-            --registry "acrvkpdabdemo" \
-            --resource-group "rg-vkp-dabdemo" \
+            --registry "acrvpdabdemo" \
+            --resource-group "rg-vp-dabdemo" \
             --image "vkp-dab-api:${GITHUB_SHA}" \
             ./dab
 
@@ -33,19 +33,19 @@ jobs:
         shell: bash
         run: |
           ACR_LOGIN_SERVER=$(az acr show \
-            --name "acrvkpdabdemo" \
-            --resource-group "rg-vkp-dabdemo" \
+            --name "acrvpdabdemo" \
+            --resource-group "rg-vp-dabdemo" \
             --query "loginServer" \
             --output tsv)
 
           UAMI_CLIENT_ID=$(az identity show \
-            --name "id-vkp-aca-dabdemo" \
-            --resource-group "rg-vkp-dabdemo" \
+            --name "id-vp-aca-dabdemo" \
+            --resource-group "rg-vp-dabdemo" \
             --query "clientId" \
             --output tsv)
 
           az containerapp update \
-            --name "ca-vkp-dabdemo" \
-            --resource-group "rg-vkp-dabdemo" \
+            --name "ca-vp-dabdemo" \
+            --resource-group "rg-vp-dabdemo" \
             --image "${ACR_LOGIN_SERVER}/vkp-dab-api:${GITHUB_SHA}" \
             --set-env-vars "AZURE_CLIENT_ID=${UAMI_CLIENT_ID}"

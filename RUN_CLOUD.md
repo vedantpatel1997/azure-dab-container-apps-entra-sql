@@ -35,15 +35,15 @@ The command above writes your current public IP into `terraform/local.auto.tfvar
 Terraform creates fixed names:
 
 ```text
-Resource group: rg-vkp-dabdemo
-ACR: acrvkpdabdemo.azurecr.io
-SQL server: sql-vkp-dabdemo.database.windows.net
+Resource group: rg-vp-dabdemo
+ACR: acrvpdabdemo.azurecr.io
+SQL server: sql-vp-dabdemo.database.windows.net
 SQL database: vkp-dabdemo
-Key Vault: kv-vkp-dabdemo
-Container App: ca-vkp-dabdemo
-Managed identity: id-vkp-aca-dabdemo
-SQL Entra group: grp-vkp-sql-dabdemo
-API scope: api://app-vkp-api-dabdemo/access_as_user
+Key Vault: kv-vp-dabdemo
+Container App: ca-vp-dabdemo
+Managed identity: id-vp-aca-dabdemo
+SQL Entra group: grp-vp-sql-dabdemo
+API scope: api://app-vp-api-dabdemo/access_as_user
 ```
 
 The Container App URL is created by Azure. Get it after apply:
@@ -52,15 +52,21 @@ The Container App URL is created by Azure. Get it after apply:
 terraform -chdir=terraform output -raw container_app_url
 ```
 
-## 3. Update DAB Audience
+## 3. Check The DAB Audience
 
-Terraform creates the Entra API app, so the API audience is known only after apply:
+The current API audience in both DAB config files is:
+
+```text
+911707a6-46f5-432b-86d1-9e645a3b6e4b
+```
+
+If you delete and recreate the Terraform infrastructure, get the new API audience:
 
 ```powershell
 terraform -chdir=terraform output -raw api_audience
 ```
 
-Replace `REPLACE_WITH_TERRAFORM_OUTPUT_API_AUDIENCE` in:
+Then update the `runtime.host.authentication.jwt.audience` value in:
 
 ```text
 dab/dab-config.json
@@ -74,7 +80,7 @@ Commit and push that change before running the GitHub Action.
 Connect in SSMS:
 
 ```text
-Server: sql-vkp-dabdemo.database.windows.net
+Server: sql-vp-dabdemo.database.windows.net
 Database: vkp-dabdemo
 Authentication: Microsoft Entra MFA or Microsoft Entra interactive
 ```
@@ -87,7 +93,7 @@ For this sample, you can run:
 dab/dabdemo_sample_schema.sql
 ```
 
-Terraform sets `grp-vkp-sql-dabdemo` as the SQL Entra administrator group and adds your user plus the Container App managed identity as members.
+Terraform sets `grp-vp-sql-dabdemo` as the SQL Entra administrator group and adds your user plus the Container App managed identity as members.
 
 If SSMS login fails immediately after Terraform finishes, wait a few minutes and try again. Entra group membership can take a short time to work in Azure SQL.
 
@@ -119,7 +125,7 @@ That Entra app needs:
 
 ```text
 Reader on the subscription
-Contributor on rg-vkp-dabdemo
+Contributor on rg-vp-dabdemo
 ```
 
 The federated credential subject should match this repo and branch:
@@ -144,13 +150,13 @@ The workflow:
 
 1. Logs in to Azure.
 2. Builds `vkp-dab-api:${GITHUB_SHA}` in ACR.
-3. Updates `ca-vkp-dabdemo` to use that image.
+3. Updates `ca-vp-dabdemo` to use that image.
 
 ## 8. Test Cloud Endpoints
 
 ```powershell
 $baseUrl = terraform -chdir=terraform output -raw container_app_url
-$scope = "api://app-vkp-api-dabdemo/access_as_user"
+$scope = "api://app-vp-api-dabdemo/access_as_user"
 $token = az account get-access-token --scope $scope --query accessToken -o tsv
 $headers = @{ Authorization = "Bearer $token" }
 
@@ -159,6 +165,29 @@ Invoke-WebRequest "$baseUrl/api/openapi" -Headers $headers -UseBasicParsing
 Invoke-WebRequest "$baseUrl/api/dbo_Products" -Headers $headers -UseBasicParsing
 Invoke-WebRequest "$baseUrl/api/dbo_Customers" -Headers $headers -UseBasicParsing
 ```
+
+GraphQL:
+
+```powershell
+$body = @{ query = "{ dbo_Products { items { ProductId Name } } }" } | ConvertTo-Json -Compress
+
+Invoke-RestMethod `
+  -Uri "$baseUrl/graphql" `
+  -Method POST `
+  -ContentType "application/json" `
+  -Headers $headers `
+  -Body $body
+```
+
+Optional health check:
+
+```powershell
+Invoke-WebRequest "$baseUrl/health" -UseBasicParsing
+```
+
+In production mode, `/health` can return `403` or show REST checks as forbidden when your entities only allow the `authenticated` role. Use the authenticated REST and GraphQL calls above as the real API test.
+
+The `/mcp` path is enabled for MCP clients. A normal browser or `Invoke-WebRequest` GET can return `406 Not Acceptable`; that does not mean REST or GraphQL is broken.
 
 Anonymous table access should fail after tables exist:
 

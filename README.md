@@ -24,20 +24,20 @@ Terraform no longer adds a random suffix to resource names.
 ```text
 Tenant: be945e7a-2e17-4b44-926f-512e85873eec
 Subscription: 6a3bb170-5159-4bff-860b-aa74fb762697
-Resource group: rg-vkp-dabdemo
-ACR: acrvkpdabdemo.azurecr.io
-SQL server: sql-vkp-dabdemo.database.windows.net
+Resource group: rg-vp-dabdemo
+ACR: acrvpdabdemo.azurecr.io
+SQL server: sql-vp-dabdemo.database.windows.net
 SQL database: vkp-dabdemo
-Key Vault: kv-vkp-dabdemo
-Container App: ca-vkp-dabdemo
-Managed identity: id-vkp-aca-dabdemo
-SQL Entra group: grp-vkp-sql-dabdemo
-API scope: api://app-vkp-api-dabdemo/access_as_user
+Key Vault: kv-vp-dabdemo
+Container App: ca-vp-dabdemo
+Managed identity: id-vp-aca-dabdemo
+SQL Entra group: grp-vp-sql-dabdemo
+API scope: api://app-vp-api-dabdemo/access_as_user
 ```
 
 ## Authentication Model
 
-There is one SQL Entra group: `grp-vkp-sql-dabdemo`.
+There is one SQL Entra group: `grp-vp-sql-dabdemo`.
 
 Terraform adds:
 

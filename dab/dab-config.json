@@ -29,7 +29,7 @@
       "authentication": {
         "provider": "EntraId",
         "jwt": {
-          "audience": "REPLACE_WITH_TERRAFORM_OUTPUT_API_AUDIENCE",
+          "audience": "911707a6-46f5-432b-86d1-9e645a3b6e4b",
           "issuer": "https://login.microsoftonline.com/be945e7a-2e17-4b44-926f-512e85873eec/v2.0"
         }
       }
@@ -71,7 +71,7 @@
     }
   },
   "azure-key-vault": {
-    "endpoint": "https://kv-vkp-dabdemo.vault.azure.net/",
+    "endpoint": "https://kv-vp-dabdemo.vault.azure.net/",
     "retry-policy": {
       "mode": "exponential",
       "max-count": 3,
