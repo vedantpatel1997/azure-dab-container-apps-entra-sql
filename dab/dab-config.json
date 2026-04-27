@@ -29,8 +29,8 @@
       "authentication": {
         "provider": "EntraId",
         "jwt": {
-          "audience": "${api_audience}",
-          "issuer": "${jwt_issuer}"
+          "audience": "6d37871a-7694-47d2-9423-c1f2f77ac353",
+          "issuer": "https://login.microsoftonline.com/be945e7a-2e17-4b44-926f-512e85873eec/v2.0"
         }
       }
     },
@@ -71,7 +71,7 @@
     }
   },
   "azure-key-vault": {
-    "endpoint": "${key_vault_uri}",
+    "endpoint": "https://kv-vkp-vmerdr.vault.azure.net/",
     "retry-policy": {
       "mode": "exponential",
       "max-count": 3,
@@ -81,3 +81,4 @@
     }
   }
 }
+

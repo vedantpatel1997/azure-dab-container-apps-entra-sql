@@ -36,7 +36,7 @@ resource "azurerm_key_vault_access_policy" "uami" {
 
 resource "azurerm_key_vault_secret" "sql_connection_string" {
   name         = "sql-connection-string"
-  value        = local.sql_managed_identity_connection_string
+  value        = local.sql_connection_string
   key_vault_id = azurerm_key_vault.kv.id
 
   depends_on = [azurerm_key_vault_access_policy.current_user]

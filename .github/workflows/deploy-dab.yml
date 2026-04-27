@@ -17,23 +17,15 @@ jobs:
       - uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Render DAB config
-        shell: pwsh
-        run: |
-          ./scripts/Render-DabConfig.ps1 `
-            -ApiAudience "${{ vars.DAB_API_AUDIENCE }}" `
-            -JwtIssuer "${{ vars.DAB_JWT_ISSUER }}" `
-            -KeyVaultUri "${{ vars.DAB_KEY_VAULT_URI }}"
+          tenant-id: be945e7a-2e17-4b44-926f-512e85873eec
+          subscription-id: 6a3bb170-5159-4bff-860b-aa74fb762697
 
       - name: Build image in ACR
         shell: bash
         run: |
           az acr build \
-            --registry "${{ vars.AZURE_ACR_NAME }}" \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --registry "acrvkpvmerdr" \
+            --resource-group "rg-vkp-vmerdr" \
             --image "vkp-dab-api:${GITHUB_SHA}" \
             ./dab
 
@@ -41,7 +33,7 @@ jobs:
         shell: bash
         run: |
           az containerapp update \
-            --name "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
-            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
-            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/vkp-dab-api:${GITHUB_SHA}" \
-            --set-env-vars "AZURE_CLIENT_ID=${{ vars.AZURE_UAMI_CLIENT_ID }}"
+            --name "ca-vkp-vmerdr" \
+            --resource-group "rg-vkp-vmerdr" \
+            --image "acrvkpvmerdr.azurecr.io/vkp-dab-api:${GITHUB_SHA}" \
+            --set-env-vars "AZURE_CLIENT_ID=d57a76de-32ba-4c84-987e-4170dca4624f"

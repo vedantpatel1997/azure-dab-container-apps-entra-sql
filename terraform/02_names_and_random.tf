@@ -31,7 +31,7 @@ locals {
   api_identifier_uri    = "api://${local.api_app_name}"
   sql_admin_password    = coalesce(var.sql_admin_password, random_password.sql_admin.result)
 
-  sql_managed_identity_connection_string = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};Authentication=Active Directory Managed Identity;User Id=${azurerm_user_assigned_identity.aca.client_id};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
+  sql_connection_string = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};User ID=${var.sql_admin_login};Password=${local.sql_admin_password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
 
   terraform_principal_object_id = data.azuread_client_config.current.object_id
   sql_admin_member_object_ids   = toset(concat([local.terraform_principal_object_id], tolist(var.developer_object_ids)))
