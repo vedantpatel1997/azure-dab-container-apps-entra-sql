@@ -1,0 +1,53 @@
+name: deploy-dab
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "dab/**"
+      - "scripts/Render-DabConfig.ps1"
+      - ".github/workflows/deploy-dab.yml"
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Render DAB config
+        shell: pwsh
+        run: |
+          ./scripts/Render-DabConfig.ps1 `
+            -ApiAudience "${{ vars.DAB_API_AUDIENCE }}" `
+            -JwtIssuer "${{ vars.DAB_JWT_ISSUER }}" `
+            -KeyVaultUri "${{ vars.DAB_KEY_VAULT_URI }}"
+
+      - name: Build image in ACR
+        shell: bash
+        run: |
+          az acr build \
+            --registry "${{ vars.AZURE_ACR_NAME }}" \
+            --image "dab-api:${GITHUB_SHA}" \
+            ./dab
+
+      - name: Update Container App
+        shell: bash
+        run: |
+          az containerapp update \
+            --name "${{ vars.AZURE_CONTAINER_APP_NAME }}" \
+            --resource-group "${{ vars.AZURE_RESOURCE_GROUP }}" \
+            --image "${{ vars.AZURE_ACR_LOGIN_SERVER }}/dab-api:${GITHUB_SHA}" \
+            --set-env-vars "AZURE_CLIENT_ID=${{ vars.AZURE_UAMI_CLIENT_ID }}"

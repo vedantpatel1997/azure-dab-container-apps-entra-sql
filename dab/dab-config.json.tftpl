@@ -1,0 +1,83 @@
+{
+  "$schema": "https://github.com/Azure/data-api-builder/releases/download/2.0.0-rc/dab.draft.schema.json",
+  "data-source": {
+    "database-type": "mssql",
+    "connection-string": "@akv('sql-connection-string')",
+    "options": {
+      "set-session-context": false
+    }
+  },
+  "runtime": {
+    "rest": {
+      "enabled": true,
+      "path": "/api"
+    },
+    "graphql": {
+      "enabled": true,
+      "path": "/graphql"
+    },
+    "mcp": {
+      "enabled": true,
+      "path": "/mcp"
+    },
+    "host": {
+      "mode": "production",
+      "cors": {
+        "origins": ["*"],
+        "allow-credentials": false
+      },
+      "authentication": {
+        "provider": "EntraId",
+        "jwt": {
+          "audience": "${api_audience}",
+          "issuer": "${jwt_issuer}"
+        }
+      }
+    },
+    "cache": {
+      "enabled": false
+    }
+  },
+  "autoentities": {
+    "all-schemas": {
+      "patterns": {
+        "include": [
+          "dbo.%"
+        ],
+        "exclude": [],
+        "name": "{schema}_{object}"
+      },
+      "template": {
+        "rest": {
+          "enabled": true
+        },
+        "graphql": {
+          "enabled": true
+        },
+        "cache": {
+          "enabled": false
+        }
+      },
+      "permissions": [
+        {
+          "role": "authenticated",
+          "actions": [
+            {
+              "action": "*"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "azure-key-vault": {
+    "endpoint": "${key_vault_uri}",
+    "retry-policy": {
+      "mode": "exponential",
+      "max-count": 3,
+      "delay-seconds": 2,
+      "max-delay-seconds": 10,
+      "network-timeout-seconds": 45
+    }
+  }
+}

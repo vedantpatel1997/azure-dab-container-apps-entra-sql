@@ -1,0 +1,13 @@
+subscription_id = "6a3bb170-5159-4bff-860b-aa74fb762697"
+tenant_id       = "be945e7a-2e17-4b44-926f-512e85873eec"
+location        = "westus3"
+name_prefix     = "dabsecure"
+
+# Optional. If omitted, Terraform generates the fallback SQL admin password.
+# DAB does not use SQL auth.
+# sql_admin_password = "replace-with-a-strong-password"
+
+# Optional. Add your public IP if local SQL bootstrap from your workstation is blocked.
+# allowed_ip_addresses = {
+#   AllowMyWorkstation = "x.x.x.x"
+# }

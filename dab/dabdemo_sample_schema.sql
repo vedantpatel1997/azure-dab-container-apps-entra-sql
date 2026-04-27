@@ -129,7 +129,7 @@ BEGIN
 END;
 GO
 
-SELECT 'Customers' AS ObjectName, COUNT(*) AS RowCount FROM dbo.Customers
+SELECT 'Customers' AS ObjectName, COUNT(*) AS [Rows] FROM dbo.Customers
 UNION ALL SELECT 'Products', COUNT(*) FROM dbo.Products
 UNION ALL SELECT 'SalesOrders', COUNT(*) FROM dbo.SalesOrders
 UNION ALL SELECT 'OrderItems', COUNT(*) FROM dbo.OrderItems;

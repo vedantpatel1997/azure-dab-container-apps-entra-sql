@@ -1,0 +1,7 @@
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+dab/dab-config.json
+dab/dab-config.local.json
+terraform/terraform.tfvars
