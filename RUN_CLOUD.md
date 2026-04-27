@@ -3,7 +3,7 @@
 Cloud deployment has three simple parts:
 
 1. Terraform creates Azure resources.
-2. You create tables/grants in SSMS.
+2. You create tables in SSMS.
 3. GitHub Actions builds the image and updates Container Apps.
 
 ## 1. Create Azure Infrastructure
@@ -26,33 +26,53 @@ terraform -chdir=terraform validate
 terraform -chdir=terraform apply
 ```
 
-Current resource names:
+Terraform uses local state only.
+
+## 2. Resource Names
+
+Terraform creates fixed names:
 
 ```text
-Resource group: rg-vkp-vmerdr
-ACR: acrvkpvmerdr.azurecr.io
-SQL server: sql-vkp-vmerdr.database.windows.net
+Resource group: rg-vkp-dabdemo
+ACR: acrvkpdabdemo.azurecr.io
+SQL server: sql-vkp-dabdemo.database.windows.net
 SQL database: vkp-dabdemo
-Key Vault: kv-vkp-vmerdr
-Container App: ca-vkp-vmerdr
-Container App URL: https://ca-vkp-vmerdr.politesand-c76afc10.westus3.azurecontainerapps.io
-Managed identity: id-vkp-aca-vmerdr
+Key Vault: kv-vkp-dabdemo
+Container App: ca-vkp-dabdemo
+Managed identity: id-vkp-aca-dabdemo
+SQL Entra group: grp-vkp-sql-dabdemo
+API scope: api://app-vkp-api-dabdemo/access_as_user
 ```
 
-If Terraform outputs different values after a rebuild, update:
+The Container App URL is created by Azure. Get it after apply:
+
+```powershell
+terraform -chdir=terraform output -raw container_app_url
+```
+
+## 3. Update DAB Audience
+
+Terraform creates the Entra API app, so the API audience is known only after apply:
+
+```powershell
+terraform -chdir=terraform output -raw api_audience
+```
+
+Replace `REPLACE_WITH_TERRAFORM_OUTPUT_API_AUDIENCE` in:
 
 ```text
 dab/dab-config.json
 dab/dab-config.local.json
-.github/workflows/deploy-dab.yml
 ```
 
-## 2. Run Your SQL Migration In SSMS
+Commit and push that change before running the GitHub Action.
+
+## 4. Run Your SQL Migration In SSMS
 
 Connect in SSMS:
 
 ```text
-Server: sql-vkp-vmerdr.database.windows.net
+Server: sql-vkp-dabdemo.database.windows.net
 Database: vkp-dabdemo
 Authentication: Microsoft Entra MFA or Microsoft Entra interactive
 ```
@@ -65,20 +85,23 @@ For this sample, you can run:
 dab/dabdemo_sample_schema.sql
 ```
 
-## 3. SQL Connection String
+Terraform sets `grp-vkp-sql-dabdemo` as the SQL Entra administrator group and adds your user plus the Container App managed identity as members.
 
-Terraform stores the SQL connection string in Key Vault:
+## 5. Key Vault Connection Strings
+
+Terraform stores three connection strings:
 
 ```text
-Key Vault: kv-vkp-vmerdr
-Secret: sql-connection-string
+sql-connection-string-local      Local DAB, uses your Azure CLI credential
+sql-connection-string-cloud      Cloud DAB, uses the Container App UAMI
+sql-connection-string-sql-auth   SQL username/password testing connection
 ```
 
-Do not put the SQL connection string in GitHub.
+Production DAB uses `sql-connection-string-cloud`.
 
-The Container App managed identity only needs Key Vault access. It does not need a SQL database user.
+Local DAB uses `sql-connection-string-local`.
 
-## 4. Configure GitHub Actions
+## 6. Configure GitHub Actions
 
 Only one GitHub repository variable is needed:
 
@@ -88,11 +111,18 @@ AZURE_CLIENT_ID
 
 This is the client id of the Entra app that GitHub Actions uses for OIDC login.
 
-The workflow already contains the tenant id, subscription id, ACR name, resource group, Container App name, image name, and managed identity client id.
+That Entra app needs:
+
+```text
+Reader on the subscription
+Contributor on rg-vkp-dabdemo
+```
+
+The workflow uses fixed resource names and looks up the Container App managed identity client id during deployment.
 
 No GitHub secrets are required.
 
-## 5. Run The GitHub Action
+## 7. Run The GitHub Action
 
 In GitHub:
 
@@ -104,13 +134,13 @@ The workflow:
 
 1. Logs in to Azure.
 2. Builds `vkp-dab-api:${GITHUB_SHA}` in ACR.
-3. Updates `ca-vkp-vmerdr` to use that image.
+3. Updates `ca-vkp-dabdemo` to use that image.
 
-## 6. Test Cloud Endpoints
+## 8. Test Cloud Endpoints
 
 ```powershell
-$baseUrl = "https://ca-vkp-vmerdr.politesand-c76afc10.westus3.azurecontainerapps.io"
-$scope = "api://app-vkp-api-vmerdr/access_as_user"
+$baseUrl = terraform -chdir=terraform output -raw container_app_url
+$scope = "api://app-vkp-api-dabdemo/access_as_user"
 $token = az account get-access-token --scope $scope --query accessToken -o tsv
 $headers = @{ Authorization = "Bearer $token" }
 
@@ -120,20 +150,7 @@ Invoke-WebRequest "$baseUrl/api/dbo_Products" -Headers $headers -UseBasicParsing
 Invoke-WebRequest "$baseUrl/api/dbo_Customers" -Headers $headers -UseBasicParsing
 ```
 
-GraphQL:
-
-```powershell
-$body = @{ query = "{ dbo_Products { items { ProductId Sku Name Category UnitPrice } } }" } | ConvertTo-Json -Compress
-
-Invoke-RestMethod `
-  -Uri "$baseUrl/graphql" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Headers $headers `
-  -Body $body
-```
-
-Anonymous table access should fail:
+Anonymous table access should fail after tables exist:
 
 ```powershell
 Invoke-WebRequest "$baseUrl/api/dbo_Products" -UseBasicParsing

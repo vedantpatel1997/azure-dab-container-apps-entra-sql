@@ -41,6 +41,6 @@ variable "allowed_ip_addresses" {
 
 variable "developer_object_ids" {
   type        = set(string)
-  description = "Human Entra object IDs that should retain SQL admin/access and Key Vault secret access."
+  description = "Human Entra object IDs that should be added to the SQL access group and allowed to read Key Vault secrets."
   default     = ["b7cd8d10-a86b-4200-bafa-1d701aef4ed2"]
 }

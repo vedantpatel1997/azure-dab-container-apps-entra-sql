@@ -34,9 +34,25 @@ resource "azurerm_key_vault_access_policy" "uami" {
   secret_permissions = ["Get", "List"]
 }
 
-resource "azurerm_key_vault_secret" "sql_connection_string" {
-  name         = "sql-connection-string"
-  value        = local.sql_connection_string
+resource "azurerm_key_vault_secret" "sql_connection_string_local" {
+  name         = "sql-connection-string-local"
+  value        = local.sql_connection_string_local
+  key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_key_vault_access_policy.current_user]
+}
+
+resource "azurerm_key_vault_secret" "sql_connection_string_cloud" {
+  name         = "sql-connection-string-cloud"
+  value        = local.sql_connection_string_cloud
+  key_vault_id = azurerm_key_vault.kv.id
+
+  depends_on = [azurerm_key_vault_access_policy.current_user]
+}
+
+resource "azurerm_key_vault_secret" "sql_connection_string_sql_auth" {
+  name         = "sql-connection-string-sql-auth"
+  value        = local.sql_connection_string_sql_auth
   key_vault_id = azurerm_key_vault.kv.id
 
   depends_on = [azurerm_key_vault_access_policy.current_user]

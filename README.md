@@ -2,14 +2,12 @@
 
 This repo is intentionally simple.
 
-Terraform creates the Azure infrastructure. You create the SQL tables yourself in SSMS. GitHub Actions builds the DAB image and updates Azure Container Apps.
-
-The SQL connection string is the only secret-like value. Terraform stores it in Azure Key Vault as `sql-connection-string`. It is not stored in GitHub.
+Terraform creates the Azure infrastructure. You create SQL tables yourself in SSMS. GitHub Actions builds the DAB image in ACR and updates Azure Container Apps.
 
 ## Files To Know
 
 ```text
-terraform/                         Azure infrastructure
+terraform/                         Azure infrastructure with local state
 dab/dab-config.json                Production DAB config
 dab/dab-config.local.json          Local DAB config, same database as production
 dab/Dockerfile                     Container image
@@ -19,20 +17,45 @@ RUN_LOCAL.md                       Local run instructions
 RUN_CLOUD.md                       Cloud run instructions
 ```
 
-## Current Azure Values
+## Fixed Resource Names
+
+Terraform no longer adds a random suffix to resource names.
 
 ```text
 Tenant: be945e7a-2e17-4b44-926f-512e85873eec
 Subscription: 6a3bb170-5159-4bff-860b-aa74fb762697
-Resource group: rg-vkp-vmerdr
-ACR: acrvkpvmerdr.azurecr.io
-SQL server: sql-vkp-vmerdr.database.windows.net
+Resource group: rg-vkp-dabdemo
+ACR: acrvkpdabdemo.azurecr.io
+SQL server: sql-vkp-dabdemo.database.windows.net
 SQL database: vkp-dabdemo
-Key Vault: kv-vkp-vmerdr
-Container App: ca-vkp-vmerdr
-Container App URL: https://ca-vkp-vmerdr.politesand-c76afc10.westus3.azurecontainerapps.io
-Managed identity: id-vkp-aca-vmerdr
-API scope: api://app-vkp-api-vmerdr/access_as_user
+Key Vault: kv-vkp-dabdemo
+Container App: ca-vkp-dabdemo
+Managed identity: id-vkp-aca-dabdemo
+SQL Entra group: grp-vkp-sql-dabdemo
+API scope: api://app-vkp-api-dabdemo/access_as_user
+```
+
+## Authentication Model
+
+There is one SQL Entra group: `grp-vkp-sql-dabdemo`.
+
+Terraform adds:
+
+```text
+Your user object id from developer_object_ids
+The Container App user-assigned managed identity
+```
+
+Local DAB uses your Azure CLI credential. Cloud DAB uses the Container App managed identity.
+
+## Key Vault Secrets
+
+Terraform stores three connection strings:
+
+```text
+sql-connection-string-local      Uses Active Directory Default for local runs
+sql-connection-string-cloud      Uses the Container App user-assigned managed identity
+sql-connection-string-sql-auth   Uses SQL username and password for testing
 ```
 
 ## Run
@@ -40,21 +63,3 @@ API scope: api://app-vkp-api-vmerdr/access_as_user
 For local development, follow [RUN_LOCAL.md](RUN_LOCAL.md).
 
 For Azure deployment, follow [RUN_CLOUD.md](RUN_CLOUD.md).
-
-## Important
-
-If you delete and recreate the Terraform infrastructure, some generated values may change. After recreating, run:
-
-```powershell
-terraform -chdir=terraform output
-```
-
-Then update the plain text values in:
-
-```text
-dab/dab-config.json
-dab/dab-config.local.json
-.github/workflows/deploy-dab.yml
-RUN_LOCAL.md
-RUN_CLOUD.md
-```

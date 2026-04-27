@@ -8,8 +8,8 @@ resource "azurerm_mssql_server" "sql" {
   minimum_tls_version          = "1.2"
 
   azuread_administrator {
-    login_username = azuread_group.sql_admins.display_name
-    object_id      = azuread_group.sql_admins.object_id
+    login_username = azuread_group.sql.display_name
+    object_id      = azuread_group.sql.object_id
     tenant_id      = var.tenant_id
   }
 }

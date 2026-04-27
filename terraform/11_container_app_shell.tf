@@ -45,7 +45,7 @@ resource "azurerm_container_app" "dab" {
   depends_on = [
     azurerm_role_assignment.acr_pull,
     azurerm_key_vault_access_policy.uami,
-    azurerm_key_vault_secret.sql_connection_string
+    azurerm_key_vault_secret.sql_connection_string_cloud
   ]
 
   lifecycle {

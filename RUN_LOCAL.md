@@ -1,6 +1,6 @@
 # Run Locally
 
-Local DAB uses the same Azure SQL database as production.
+Local DAB uses the same Azure SQL database as production, but it connects with your signed-in Azure CLI user.
 
 ## 1. Sign In
 
@@ -9,46 +9,61 @@ az login --tenant be945e7a-2e17-4b44-926f-512e85873eec
 az account set --subscription 6a3bb170-5159-4bff-860b-aa74fb762697
 ```
 
-## 2. Confirm The Database Exists
+Your Entra user object id must be in `terraform/developer_object_ids`. Terraform adds that user to:
+
+```text
+grp-vkp-sql-dabdemo
+```
+
+## 2. Confirm Terraform Has Been Applied
 
 Terraform creates:
 
 ```text
-SQL server: sql-vkp-vmerdr.database.windows.net
+SQL server: sql-vkp-dabdemo.database.windows.net
 SQL database: vkp-dabdemo
+Key Vault: kv-vkp-dabdemo
+Secret: sql-connection-string-local
 ```
 
-Before DAB can work, create your tables in SSMS and grant access as described in [RUN_CLOUD.md](RUN_CLOUD.md).
-
-## 3. Check DAB Auth Values
-
-The local config is committed at:
+The local DAB config reads:
 
 ```text
 dab/dab-config.local.json
 ```
 
-It already contains:
+## 3. Update The API Audience
 
-```text
-audience: 6d37871a-7694-47d2-9423-c1f2f77ac353
-issuer: https://login.microsoftonline.com/be945e7a-2e17-4b44-926f-512e85873eec/v2.0
+After `terraform apply`, get the API audience:
+
+```powershell
+terraform -chdir=terraform output -raw api_audience
 ```
 
-If you recreate Terraform and the API app changes, update the audience in both:
+Replace `REPLACE_WITH_TERRAFORM_OUTPUT_API_AUDIENCE` in both files:
 
 ```text
 dab/dab-config.json
 dab/dab-config.local.json
 ```
 
-Get the new value with:
+## 4. Create Tables In SSMS
 
-```powershell
-terraform -chdir=terraform output -raw api_audience
+Connect in SSMS:
+
+```text
+Server: sql-vkp-dabdemo.database.windows.net
+Database: vkp-dabdemo
+Authentication: Microsoft Entra MFA or Microsoft Entra interactive
 ```
 
-## 4. Start DAB Locally
+Run your migration script. For the sample schema, run:
+
+```text
+dab/dabdemo_sample_schema.sql
+```
+
+## 5. Start DAB Locally
 
 From the repo root:
 
@@ -62,19 +77,12 @@ dotnet tool run dab -- start --config .\dab\dab-config.local.json --no-https-red
 
 Leave that terminal running.
 
-Local DAB reads the SQL connection string from the same Key Vault secret production uses:
-
-```text
-Key Vault: kv-vkp-vmerdr
-Secret: sql-connection-string
-```
-
-## 5. Test Local Endpoints
+## 6. Test Local Endpoints
 
 Open a second PowerShell terminal:
 
 ```powershell
-$scope = "api://app-vkp-api-vmerdr/access_as_user"
+$scope = "api://app-vkp-api-dabdemo/access_as_user"
 $token = az account get-access-token --scope $scope --query accessToken -o tsv
 $headers = @{ Authorization = "Bearer $token" }
 
@@ -84,20 +92,7 @@ Invoke-WebRequest "http://localhost:5000/api/dbo_Products" -Headers $headers -Us
 Invoke-WebRequest "http://localhost:5000/api/dbo_Customers" -Headers $headers -UseBasicParsing
 ```
 
-GraphQL:
-
-```powershell
-$body = @{ query = "{ dbo_Products { items { ProductId Sku Name Category UnitPrice } } }" } | ConvertTo-Json -Compress
-
-Invoke-RestMethod `
-  -Uri "http://localhost:5000/graphql" `
-  -Method POST `
-  -ContentType "application/json" `
-  -Headers $headers `
-  -Body $body
-```
-
-Anonymous table access should fail:
+Anonymous table access should fail after tables exist:
 
 ```powershell
 Invoke-WebRequest "http://localhost:5000/api/dbo_Products" -UseBasicParsing

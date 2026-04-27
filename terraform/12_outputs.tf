@@ -50,8 +50,20 @@ output "sql_database_name" {
   value = azurerm_mssql_database.db.name
 }
 
-output "sql_access_group" {
-  value = azuread_group.sql_access.display_name
+output "sql_group" {
+  value = azuread_group.sql.display_name
+}
+
+output "key_vault_secret_local_connection_string" {
+  value = azurerm_key_vault_secret.sql_connection_string_local.name
+}
+
+output "key_vault_secret_cloud_connection_string" {
+  value = azurerm_key_vault_secret.sql_connection_string_cloud.name
+}
+
+output "key_vault_secret_sql_auth_connection_string" {
+  value = azurerm_key_vault_secret.sql_connection_string_sql_auth.name
 }
 
 output "uami_client_id" {
