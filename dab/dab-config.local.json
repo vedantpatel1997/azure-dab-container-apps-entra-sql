@@ -8,6 +8,10 @@
     }
   },
   "runtime": {
+    "health": {
+      "enabled": true,
+      "roles": ["authenticated"]
+    },
     "rest": {
       "enabled": true,
       "path": "/api"
@@ -22,7 +26,7 @@
       "path": "/mcp"
     },
     "host": {
-      "mode": "development",
+      "mode": "production",
       "cors": {
         "origins": ["*"],
         "allow-credentials": false

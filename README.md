@@ -58,6 +58,37 @@ sql-connection-string-cloud      Uses the Container App user-assigned managed id
 sql-connection-string-sql-auth   Uses SQL username and password for testing
 ```
 
+## OpenAPI And Swagger UI
+
+DAB exposes the OpenAPI document at:
+
+```text
+Local: http://localhost:5000/api/openapi
+Cloud: <container-app-url>/api/openapi
+```
+
+DAB does not host a built-in Swagger UI page at `/swagger` or `/swagger/index.html`. To see the interactive Swagger UI, run a separate Swagger UI viewer and point it at the DAB OpenAPI document.
+
+Local example:
+
+```powershell
+docker run --rm -p 8080:8080 -e SWAGGER_JSON_URL=http://host.docker.internal:5000/api/openapi swaggerapi/swagger-ui
+```
+
+Then open:
+
+```text
+http://localhost:8080
+```
+
+For secured REST calls in Swagger UI, get a user token and use the `Authorize` button:
+
+```powershell
+$scope = "api://app-vp-api-dabdemo/access_as_user"
+$token = az account get-access-token --scope $scope --query accessToken -o tsv
+$token
+```
+
 ## Run
 
 For local development, follow [RUN_LOCAL.md](RUN_LOCAL.md).

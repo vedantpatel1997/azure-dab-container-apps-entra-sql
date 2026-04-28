@@ -166,6 +166,34 @@ Invoke-WebRequest "$baseUrl/api/dbo_Products" -Headers $headers -UseBasicParsing
 Invoke-WebRequest "$baseUrl/api/dbo_Customers" -Headers $headers -UseBasicParsing
 ```
 
+OpenAPI / Swagger:
+
+```powershell
+Invoke-WebRequest "$baseUrl/api/openapi" -Headers $headers -UseBasicParsing
+```
+
+DAB exposes the Swagger/OpenAPI document at `/api/openapi`. It does not serve a built-in Swagger UI page at `/swagger` or `/swagger/index.html`, so those routes can return `400 Bad Request` or `404 Not Found`.
+
+To see the interactive Swagger UI, run a separate Swagger UI viewer and point it at the cloud OpenAPI document:
+
+```powershell
+docker run --rm -p 8080:8080 -e SWAGGER_JSON_URL="$baseUrl/api/openapi" swaggerapi/swagger-ui
+```
+
+Then open:
+
+```text
+http://localhost:8080
+```
+
+To call secured endpoints from Swagger UI, click `Authorize` and paste a bearer token from:
+
+```powershell
+$scope = "api://app-vp-api-dabdemo/access_as_user"
+$token = az account get-access-token --scope $scope --query accessToken -o tsv
+$token
+```
+
 GraphQL:
 
 ```powershell

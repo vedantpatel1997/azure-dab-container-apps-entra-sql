@@ -8,13 +8,18 @@
     }
   },
   "runtime": {
+    "health": {
+      "enabled": true,
+      "roles": ["anonymous"]
+    },
     "rest": {
       "enabled": true,
       "path": "/api"
     },
     "graphql": {
       "enabled": true,
-      "path": "/graphql"
+      "path": "/graphql",
+      "allow-introspection": true
     },
     "mcp": {
       "enabled": true,
@@ -81,4 +86,3 @@
     }
   }
 }
-
