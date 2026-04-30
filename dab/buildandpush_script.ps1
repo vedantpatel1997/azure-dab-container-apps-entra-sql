@@ -4,6 +4,8 @@ param(
     [string]$Repository = "vkp-dab-api",
     [string]$ResourceGroup = "rg-vp-dabdemo",
     [string]$ContainerAppName = "ca-vp-dabdemo",
+    [string]$ApiClientId = "911707a6-46f5-432b-86d1-9e645a3b6e4b",
+    [string]$TenantId = "be945e7a-2e17-4b44-926f-512e85873eec",
     [string]$DockerfilePath = "."
 )
 
@@ -27,6 +29,18 @@ if (-not $acrLoginServer) {
 }
 
 Write-Host "ACR Login Server: $acrLoginServer"
+
+Write-Host "Getting managed identity client id..."
+$uamiClientId = az identity show `
+    --name "id-vp-aca-dabdemo" `
+    --resource-group $ResourceGroup `
+    --query "clientId" `
+    -o tsv
+
+if (-not $uamiClientId) {
+    Write-Error "Managed identity client id not found."
+    exit 1
+}
 
 Write-Host "Logging into ACR..."
 # Keeping RG as requested
@@ -77,7 +91,12 @@ Write-Host "Updating Container App image..."
 az containerapp update `
     --name $ContainerAppName `
     --resource-group $ResourceGroup `
-    --image $ImageName
+    --image $ImageName `
+    --set-env-vars `
+        "AZURE_CLIENT_ID=$uamiClientId" `
+        "DAB_OBO_CLIENT_ID=$ApiClientId" `
+        "DAB_OBO_TENANT_ID=$TenantId" `
+        "DAB_OBO_CLIENT_SECRET=secretref:dab-obo-client-secret"
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Container App update failed."

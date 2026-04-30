@@ -14,6 +14,11 @@ resource "azurerm_container_app" "dab" {
     identity = azurerm_user_assigned_identity.aca.id
   }
 
+  secret {
+    name  = "dab-obo-client-secret"
+    value = azuread_application_password.api_obo.value
+  }
+
   ingress {
     external_enabled = true
     target_port      = 5000
@@ -39,13 +44,29 @@ resource "azurerm_container_app" "dab" {
         name  = "AZURE_CLIENT_ID"
         value = azurerm_user_assigned_identity.aca.client_id
       }
+
+      env {
+        name  = "DAB_OBO_CLIENT_ID"
+        value = azuread_application.api.client_id
+      }
+
+      env {
+        name  = "DAB_OBO_TENANT_ID"
+        value = var.tenant_id
+      }
+
+      env {
+        name        = "DAB_OBO_CLIENT_SECRET"
+        secret_name = "dab-obo-client-secret"
+      }
     }
   }
 
   depends_on = [
     azurerm_role_assignment.acr_pull,
     azurerm_key_vault_access_policy.uami,
-    azurerm_key_vault_secret.sql_connection_string_cloud
+    azurerm_key_vault_secret.sql_connection_string_obo,
+    azurerm_key_vault_secret.dab_obo_client_secret
   ]
 
   lifecycle {

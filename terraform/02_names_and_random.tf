@@ -24,6 +24,7 @@ locals {
   api_identifier_uri  = "api://${local.api_app_name}"
   sql_admin_password  = coalesce(var.sql_admin_password, random_password.sql_admin.result)
 
+  sql_connection_string_obo      = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   sql_connection_string_local    = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   sql_connection_string_cloud    = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};Authentication=Active Directory Managed Identity;User Id=${azurerm_user_assigned_identity.aca.client_id};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"
   sql_connection_string_sql_auth = "Server=tcp:${azurerm_mssql_server.sql.fully_qualified_domain_name},1433;Database=${azurerm_mssql_database.db.name};User ID=${var.sql_admin_login};Password=${local.sql_admin_password};Encrypt=True;TrustServerCertificate=False;Connection Timeout=30;"

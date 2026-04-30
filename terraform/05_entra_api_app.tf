@@ -2,10 +2,23 @@ data "azuread_service_principal" "azure_cli" {
   client_id = "04b07795-8ddb-461a-bbee-02f9e1bf7b46"
 }
 
+data "azuread_service_principal" "azure_sql" {
+  client_id = "022907d3-0f1b-48f7-badc-1ba6abab6d66"
+}
+
 resource "azuread_application" "api" {
   display_name     = local.api_app_name
   sign_in_audience = "AzureADMyOrg"
   identifier_uris  = [local.api_identifier_uri]
+
+  required_resource_access {
+    resource_app_id = data.azuread_service_principal.azure_sql.client_id
+
+    resource_access {
+      id   = data.azuread_service_principal.azure_sql.oauth2_permission_scope_ids["user_impersonation"]
+      type = "Scope"
+    }
+  }
 
   api {
     requested_access_token_version = 2
@@ -31,6 +44,17 @@ resource "azuread_service_principal_delegated_permission_grant" "azure_cli_to_ap
   service_principal_object_id          = data.azuread_service_principal.azure_cli.object_id
   resource_service_principal_object_id = azuread_service_principal.api.object_id
   claim_values                         = ["access_as_user"]
+}
+
+resource "azuread_service_principal_delegated_permission_grant" "api_to_azure_sql" {
+  service_principal_object_id          = azuread_service_principal.api.object_id
+  resource_service_principal_object_id = data.azuread_service_principal.azure_sql.object_id
+  claim_values                         = ["user_impersonation"]
+}
+
+resource "azuread_application_password" "api_obo" {
+  application_id = azuread_application.api.id
+  display_name   = "dab-obo-client-secret"
 }
 
 resource "null_resource" "azure_cli_pre_authorize" {

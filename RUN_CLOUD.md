@@ -52,6 +52,8 @@ The Container App URL is created by Azure. Get it after apply:
 terraform -chdir=terraform output -raw container_app_url
 ```
 
+This sample keeps Key Vault and SQL public network access enabled because the Container App uses their public endpoints. Access is still controlled by Key Vault access policies, SQL firewall rules, Entra authentication, and SQL permissions. For a private production topology, add private endpoints/VNet integration before disabling public access.
+
 ## 3. Check The DAB Audience
 
 The current API audience in both DAB config files is:
@@ -59,6 +61,8 @@ The current API audience in both DAB config files is:
 ```text
 911707a6-46f5-432b-86d1-9e645a3b6e4b
 ```
+
+The token request scope is `api://app-vp-api-dabdemo/access_as_user`; the resulting token `aud` claim is the API client id above.
 
 If you delete and recreate the Terraform infrastructure, get the new API audience:
 
@@ -71,6 +75,13 @@ Then update the `runtime.host.authentication.jwt.audience` value in:
 ```text
 dab/dab-config.json
 dab/dab-config.local.json
+```
+
+Also update the fixed `DAB_OBO_CLIENT_ID` value in:
+
+```text
+.github/workflows/deploy-dab.yml
+dab/buildandpush_script.ps1
 ```
 
 Commit and push that change before running the GitHub Action.
@@ -95,21 +106,29 @@ dab/dabdemo_sample_schema.sql
 
 Terraform sets `grp-vp-sql-dabdemo` as the SQL Entra administrator group and adds your user plus the Container App managed identity as members.
 
+With OBO enabled, Azure SQL sees the actual calling user, not the Container App managed identity. For production, create database users or groups for the real callers and grant the minimum table/view permissions they need.
+
 If SSMS login fails immediately after Terraform finishes, wait a few minutes and try again. Entra group membership can take a short time to work in Azure SQL.
 
 ## 5. Key Vault Connection Strings
 
-Terraform stores three connection strings:
+Terraform stores the OBO connection string, legacy/testing connection strings, and the DAB OBO client secret:
 
 ```text
-sql-connection-string-local      Local DAB, uses your Azure CLI credential
-sql-connection-string-cloud      Cloud DAB, uses the Container App UAMI
-sql-connection-string-sql-auth   SQL username/password testing connection
+sql-connection-string          Bare SQL connection string used by OBO
+dab-obo-client-secret          Client secret DAB uses for the OBO token exchange
+sql-connection-string-local    Legacy local Active Directory Default connection string
+sql-connection-string-cloud    Legacy Container App managed identity connection string
+sql-connection-string-sql-auth SQL username/password testing connection string
 ```
 
-Production DAB uses `sql-connection-string-cloud`.
+Production and local OBO configs use `sql-connection-string`. It intentionally has no `Authentication=` keyword.
 
-Local DAB uses `sql-connection-string-local`.
+The Container App stores `dab-obo-client-secret` as a Container Apps secret and exposes it to DAB as:
+
+```text
+DAB_OBO_CLIENT_SECRET=secretref:dab-obo-client-secret
+```
 
 ## 6. Configure GitHub Actions
 
@@ -134,7 +153,7 @@ The federated credential subject should match this repo and branch:
 repo:vedantpatel1997/azure-dab-container-apps-entra-sql:ref:refs/heads/main
 ```
 
-The workflow uses fixed resource names and looks up the Container App managed identity client id during deployment.
+The workflow uses fixed resource names and looks up the Container App managed identity client id and DAB API app client id during deployment.
 
 No GitHub secrets are required.
 
@@ -151,14 +170,27 @@ The workflow:
 1. Logs in to Azure.
 2. Builds `vkp-dab-api:${GITHUB_SHA}` in ACR.
 3. Updates `ca-vp-dabdemo` to use that image.
+4. Sets `DAB_OBO_CLIENT_ID`, `DAB_OBO_TENANT_ID`, and `DAB_OBO_CLIENT_SECRET` for the container.
 
 ## 8. Test Cloud Endpoints
+
+If the Container App was manually stopped, start it before testing:
+
+```powershell
+$subscription = terraform -chdir=terraform output -raw subscription_id
+$uri = "https://management.azure.com/subscriptions/$subscription/resourceGroups/rg-vp-dabdemo/providers/Microsoft.App/containerApps/ca-vp-dabdemo/start?api-version=2025-07-01"
+az rest --method post --url $uri
+```
 
 ```powershell
 $baseUrl = terraform -chdir=terraform output -raw container_app_url
 $scope = "api://app-vp-api-dabdemo/access_as_user"
 $token = az account get-access-token --scope $scope --query accessToken -o tsv
 $headers = @{ Authorization = "Bearer $token" }
+
+$tokenPayload = $token.Split(".")[1].Replace("-", "+").Replace("_", "/")
+switch ($tokenPayload.Length % 4) { 2 { $tokenPayload += "==" } 3 { $tokenPayload += "=" } }
+[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($tokenPayload)) | ConvertFrom-Json | Select-Object aud,iss,scp
 
 Invoke-WebRequest "$baseUrl/" -Headers $headers -UseBasicParsing
 Invoke-WebRequest "$baseUrl/api/openapi" -Headers $headers -UseBasicParsing
@@ -210,10 +242,10 @@ Invoke-RestMethod `
 Optional health check:
 
 ```powershell
-Invoke-WebRequest "$baseUrl/health" -UseBasicParsing
+Invoke-WebRequest "$baseUrl/health" -Headers $headers -UseBasicParsing
 ```
 
-In production mode, `/health` can return `403` or show REST checks as forbidden when your entities only allow the `authenticated` role. Use the authenticated REST and GraphQL calls above as the real API test.
+Health is authenticated because OBO needs a user token before DAB can open the SQL connection as that user.
 
 The `/mcp` path is enabled for MCP clients. A normal browser or `Invoke-WebRequest` GET can return `406 Not Acceptable`; that does not mean REST or GraphQL is broken.
 

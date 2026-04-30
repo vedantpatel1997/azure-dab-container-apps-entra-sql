@@ -1,16 +1,23 @@
 resource "azurerm_mssql_server" "sql" {
-  name                         = local.sql_server_name
-  resource_group_name          = azurerm_resource_group.main.name
-  location                     = azurerm_resource_group.main.location
-  version                      = "12.0"
-  administrator_login          = var.sql_admin_login
-  administrator_login_password = local.sql_admin_password
-  minimum_tls_version          = "1.2"
+  name                          = local.sql_server_name
+  resource_group_name           = azurerm_resource_group.main.name
+  location                      = azurerm_resource_group.main.location
+  version                       = "12.0"
+  administrator_login           = var.sql_admin_login
+  administrator_login_password  = local.sql_admin_password
+  minimum_tls_version           = "1.2"
+  public_network_access_enabled = true
 
   azuread_administrator {
     login_username = azuread_group.sql.display_name
     object_id      = azuread_group.sql.object_id
     tenant_id      = var.tenant_id
+  }
+
+  lifecycle {
+    ignore_changes = [
+      express_vulnerability_assessment_enabled
+    ]
   }
 }
 

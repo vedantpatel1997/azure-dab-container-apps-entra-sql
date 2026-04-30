@@ -26,6 +26,10 @@ output "api_audience" {
   value = azuread_application.api.client_id
 }
 
+output "api_client_id" {
+  value = azuread_application.api.client_id
+}
+
 output "api_scope" {
   value = "${local.api_identifier_uri}/access_as_user"
 }
@@ -60,6 +64,14 @@ output "key_vault_secret_local_connection_string" {
 
 output "key_vault_secret_cloud_connection_string" {
   value = azurerm_key_vault_secret.sql_connection_string_cloud.name
+}
+
+output "key_vault_secret_obo_connection_string" {
+  value = azurerm_key_vault_secret.sql_connection_string_obo.name
+}
+
+output "key_vault_secret_dab_obo_client_secret" {
+  value = azurerm_key_vault_secret.dab_obo_client_secret.name
 }
 
 output "key_vault_secret_sql_auth_connection_string" {

@@ -2,15 +2,20 @@
   "$schema": "https://github.com/Azure/data-api-builder/releases/download/2.0.0-rc/dab.draft.schema.json",
   "data-source": {
     "database-type": "mssql",
-    "connection-string": "@akv('sql-connection-string-cloud')",
+    "connection-string": "@akv('sql-connection-string')",
     "options": {
       "set-session-context": false
+    },
+    "user-delegated-auth": {
+      "enabled": true,
+      "provider": "EntraId",
+      "database-audience": "https://database.windows.net"
     }
   },
   "runtime": {
     "health": {
       "enabled": true,
-      "roles": ["anonymous"]
+      "roles": ["authenticated"]
     },
     "rest": {
       "enabled": true,
@@ -32,7 +37,7 @@
         "allow-credentials": false
       },
       "authentication": {
-        "provider": "EntraId",
+        "provider": "EntraID",
         "jwt": {
           "audience": "911707a6-46f5-432b-86d1-9e645a3b6e4b",
           "issuer": "https://login.microsoftonline.com/be945e7a-2e17-4b44-926f-512e85873eec/v2.0"
@@ -47,9 +52,11 @@
     "all-schemas": {
       "patterns": {
         "include": [
-          "dbo.%"
+          "%.%"
         ],
-        "exclude": [],
+        "exclude": [
+          "MS_AI.%"
+        ],
         "name": "{schema}_{object}"
       },
       "template": {

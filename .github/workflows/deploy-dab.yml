@@ -48,4 +48,8 @@ jobs:
             --name "ca-vp-dabdemo" \
             --resource-group "rg-vp-dabdemo" \
             --image "${ACR_LOGIN_SERVER}/vkp-dab-api:${GITHUB_SHA}" \
-            --set-env-vars "AZURE_CLIENT_ID=${UAMI_CLIENT_ID}"
+            --set-env-vars \
+              "AZURE_CLIENT_ID=${UAMI_CLIENT_ID}" \
+              "DAB_OBO_CLIENT_ID=911707a6-46f5-432b-86d1-9e645a3b6e4b" \
+              "DAB_OBO_TENANT_ID=be945e7a-2e17-4b44-926f-512e85873eec" \
+              "DAB_OBO_CLIENT_SECRET=secretref:dab-obo-client-secret"
